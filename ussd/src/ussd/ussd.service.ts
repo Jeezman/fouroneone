@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import africastalking from 'africastalking';
+import * as africastalking from 'africastalking';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
@@ -14,8 +14,8 @@ export class UssdService {
     @InjectRepository(User) private userRepository: Repository<User>,
   ) {
     this.africasTalking = africastalking({
-      apiKey: this.configService.get<string>('AFRICASTALKING_API_KEY'), // Access the API key
-      username: this.configService.get<string>('AFRICASTALKING_USERNAME'), // Access the username
+      apiKey: this.configService.get<string>('AFRICASTALKING_API_KEY'),
+      username: this.configService.get<string>('AFRICASTALKING_USERNAME'),
     });
   }
 
