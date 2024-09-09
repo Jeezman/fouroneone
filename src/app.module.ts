@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UserModule } from './user/user.module';
 import { User } from './user/entities/user.entity';
+import { UssdModule } from './ussd/ussd.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { User } from './user/entities/user.entity';
       synchronize: true, // In production, make sure to disable this option
     }),
     UserModule,
+    UssdModule,
   ],
   controllers: [AppController],
   providers: [AppService],
