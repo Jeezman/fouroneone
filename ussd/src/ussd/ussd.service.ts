@@ -21,7 +21,7 @@ export class UssdService {
 
   // Process USSD requests
 
-  async processUssd(text: string, sessionId: string, phoneNumber: string) {
+  processUssd(text: string, sessionId: string, phoneNumber: string) {
     console.log(text, sessionId, phoneNumber);
     let response = '';
 
