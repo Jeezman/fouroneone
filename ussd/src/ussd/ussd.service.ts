@@ -25,6 +25,8 @@ export class UssdService {
     console.log(text, sessionId, phoneNumber);
     let response = '';
 
+    console.log('process ussd ', { text, sessionId, phoneNumber });
+
     switch (text) {
       case '':
         // First request. Start the response with CON
