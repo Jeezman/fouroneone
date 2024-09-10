@@ -20,38 +20,40 @@ export class UssdService {
   }
 
   // Process USSD requests
+
   async processUssd(text: string, sessionId: string, phoneNumber: string) {
+    console.log(text, sessionId, phoneNumber);
     let response = '';
 
     switch (text) {
       case '':
-        // First request. We start the response with CON
-        response = `CON What would you like to check?\n1. My account\n2. My phone number`;
+        // First request. Start the response with CON
+        response =
+          'CON What would you like to check? \n1. My account \n2. My phone number';
         break;
-
       case '1':
         // Business logic for first-level response
-        response = `CON Choose account information you want to view:\n1. Account number`;
+        response =
+          'CON Choose account information you want to view: \n1. Account number';
         break;
-
       case '2':
-        // Business logic for first-level response
-        // This is a terminal request. We start the response with END
+        // Terminal request. Start the response with END
         response = `END Your phone number is ${phoneNumber}`;
         break;
-
       case '1*1':
         // Second-level response where the user selected 1 in the first instance
         const accountNumber = 'ACC100101';
-        // This is a terminal request. We start the response with END
         response = `END Your account number is ${accountNumber}`;
         break;
-
       default:
-        // Handle unexpected input
-        response = `END Invalid selection`;
+        // Handle unexpected input. End the session
+        response = 'END Invalid selection. Please try again.';
     }
-
-    return response.trim(); // Ensure no extra white spaces
+    // Ensure that the response always starts with CON or END
+    if (!response.startsWith('CON') && !response.startsWith('END')) {
+      response = 'END Invalid response format.';
+    }
+    // Return the response
+    return response;
   }
 }
