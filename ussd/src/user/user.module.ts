@@ -9,5 +9,6 @@ import { Ussd } from 'src/ussd/entities/ussd.entity';
   imports: [TypeOrmModule.forFeature([User, Ussd])],
   controllers: [UserController],
   providers: [UserService],
+  exports: [UserService],
 })
 export class UserModule {}

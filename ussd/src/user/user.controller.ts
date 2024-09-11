@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -17,9 +18,15 @@ export class UserController {
     return this.userService.findAll();
   }
 
+  @Get('offerings')
+  async getOfferings(@Res() res: Response) {
+    const result = await this.userService.getOfferings();
+    res.status(200).send(result);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.userService.findOne(+id);
+    return this.userService.findOne(id);
   }
 
   @Patch(':id')
