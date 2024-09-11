@@ -48,8 +48,8 @@ export class UssdService {
     }
 
     const parts = text.split('*');
-    const mainOption = parts[0];
-    const subOption = parts[1] || '';
+    const mainOption = parts[0]; // Main option selected
+    const offeringOption = parts[1]; // Offering selection
 
     // Check if the user exists in the database
     let user = await this.userRepository.findOne({ where: { phoneNumber } });
@@ -101,57 +101,47 @@ export class UssdService {
 
         this.sessionStore[sessionId].providerUri = providerUri;
 
-        response = `CON You selected ${provider.name}. \nSelect an offering to proceed:\n`;
-        // Fetch offerings from HTTP server
-        try {
-          const responseFromServer = await axios.get(
-            `${this.tbdexServerUrl}?providerUri=${providerUri}`,
-          );
-          const offerings = responseFromServer.data.data;
-
-          // Store all offerings
-          this.sessionStore[sessionId].storedOfferings = offerings;
-
-          if (this.sessionStore[sessionId].storedOfferings.length === 0) {
-            response = 'END No offerings available.';
-          } else {
-            this.sessionStore[sessionId].storedOfferings.forEach(
-              (offering: any, index: number) => {
-                console.log(
-                  offering.data.description,
-                  index,
-                  'selected offering',
-                );
-                response += `${index + 1}. ${offering.data.description} \n`;
-              },
+        // If the user has not selected an offering yet, display offerings
+        if (!offeringOption) {
+          response = `CON You selected ${provider.name}. \nSelect an offering to proceed:\n`;
+          try {
+            const serverResponse = await axios.get(
+              `${this.tbdexServerUrl}?providerUri=${providerUri}`,
             );
-          }
-        } catch (error) {
-          console.log('Error fetching offerings:', error);
-          response = 'END Error fetching offerings. Please try again later.';
-        }
-        break;
+            const offerings = serverResponse.data.data;
 
-      default:
-        // Handle offering selection using the `subOption`
-        try {
-          const offeringIndex = parseInt(subOption) - 1;
+            // Store all offerings
+            this.sessionStore[sessionId].storedOfferings = offerings;
+
+            if (offerings.length === 0) {
+              response = 'END No offerings available.';
+            } else {
+              offerings.forEach((offering: any, index: number) => {
+                response += `${index + 1}. ${offering.data.description} \n`;
+              });
+            }
+          } catch (error) {
+            console.log('Error fetching offerings:', error);
+            response = 'END Error fetching offerings. Please try again later.';
+          }
+        } else {
+          // User selected an offering
+          const offeringIndex = parseInt(offeringOption) - 1;
           const selectedOffering =
             this.sessionStore[sessionId].storedOfferings[offeringIndex];
 
           if (selectedOffering) {
-            // User selected an offering, end the session
+            // Display selected offering and end session
             response = `END You selected: ${selectedOffering.data.description}. Thank you for using our service.`;
           } else {
             response = 'END Invalid offering selection. Please try again.';
           }
-        } catch (error) {
-          console.log('Error processing selection:', error);
-          response =
-            'END Error processing your selection. Please try again later.';
         }
-        // Clean up session data after the final offering selection
-        delete this.sessionStore[sessionId];
+        break;
+
+      default:
+        // Handle invalid or unexpected input by returning an END message
+        response = 'END Invalid option selected. Please try again.';
         break;
     }
 
