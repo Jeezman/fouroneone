@@ -20,7 +20,7 @@ export class UserService {
     user.phoneNumber = createUserDto.phoneNumber;
     user.did = did.did.document.id;
     user.sessionId = createUserDto.sessionId;
-    user.serviceCode = '';
+    user.networkCode = '';
 
     return this.userRepository.save(user);
   }

@@ -21,7 +21,7 @@ export class User {
   sessionId: string;
 
   @Column()
-  serviceCode: string;
+  networkCode: string;
 
   @CreateDateColumn()
   createdDate: Date;

@@ -7,17 +7,14 @@ export class UssdController {
 
   @Post()
   async handleUssd(@Body() ussdBody: any, @Res() res) {
-    const { text, sessionId, phoneNumber } = ussdBody;
-
-    console.log('USSD Body:', ussdBody);
+    const { text, sessionId, phoneNumber, networkCode } = ussdBody;
 
     const response = await this.ussdService.processUssd(
       text,
       sessionId,
       phoneNumber,
+      networkCode,
     );
-
-    console.log('res is ', response);
     res.header('Content-Type', 'text/plain');
     return res.send(response);
   }
