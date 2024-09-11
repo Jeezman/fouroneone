@@ -5,13 +5,11 @@ import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { User } from 'src/user/entities/user.entity';
 import { UserService } from 'src/user/user.service';
-// import { mockProviderDids } from 'src/utils/mockPFIs';
-import axios from 'axios';
+import { fetchOfferings } from 'src/utils/tbd';
 
 @Injectable()
 export class UssdService {
   private africasTalking: any;
-  private tbdexServerUrl = 'http://localhost:4000/offerings';
   private sessionStore: Record<string, any> = {}; // In-memory store for sessions
 
   constructor(
@@ -48,7 +46,7 @@ export class UssdService {
     }
 
     const parts = text.split('*');
-    const mainOption = parts[0]; // Main option selected
+    const mainOption = parts[0]; // Main option selected (PFI)
     const offeringOption = parts[1]; // Offering selection
 
     // Check if the user exists in the database
@@ -82,41 +80,24 @@ export class UssdService {
         // Fetch offerings based on provider selection
         const providerIndex = parseInt(mainOption) - 1;
         const providerNames = [
-          'aquafinance_capital',
-          'swiftliquidity_solutions',
-          'flowback_financial',
-          'vertex_liquid_assets',
-          'titanium_trust',
+          'AquaFinance Capital',
+          'SwiftLiquidity Solutions',
+          'Flowback Financial',
+          'Vertex Liquid Assets',
+          'Titanium Trust',
         ];
-        const providerKey = providerNames[providerIndex];
-        // const provider = mockProviderDids[providerKey];
-        const provider = {
-          name: 'James',
-          uri: 'http://localhost:4000/offerings',
-        };
+        const providerName = providerNames[providerIndex];
 
-        if (!provider) {
-          response = 'END Invalid provider selected. Please try again.';
-          break;
-        }
+        try {
+          // Fetch offerings using fetchOfferings function
+          const offerings = await fetchOfferings();
+          console.log('Offerings:', offerings);
+          // Store all offerings in session
+          this.sessionStore[sessionId].storedOfferings = offerings;
 
-        const providerUri = provider.uri;
-        console.log('Selected provider URI:', providerUri);
-
-        this.sessionStore[sessionId].providerUri = providerUri;
-
-        // If the user has not selected an offering yet, display offerings
-        if (!offeringOption) {
-          response = `CON You selected ${provider.name}. \nSelect an offering to proceed:\n`;
-          try {
-            const serverResponse = await axios.get(
-              `${this.tbdexServerUrl}?providerUri=${providerUri}`,
-            );
-            const offerings = serverResponse.data.data;
-
-            // Store all offerings
-            this.sessionStore[sessionId].storedOfferings = offerings;
-
+          if (!offeringOption) {
+            // Display offering options if no offering is selected yet
+            response = `CON You selected ${providerName}. \nSelect an offering to proceed:\n`;
             if (offerings.length === 0) {
               response = 'END No offerings available.';
             } else {
@@ -124,22 +105,38 @@ export class UssdService {
                 response += `${index + 1}. ${offering.data.description} \n`;
               });
             }
-          } catch (error) {
-            console.log('Error fetching offerings:', error);
-            response = 'END Error fetching offerings. Please try again later.';
-          }
-        } else {
-          // User selected an offering
-          const offeringIndex = parseInt(offeringOption) - 1;
-          const selectedOffering =
-            this.sessionStore[sessionId].storedOfferings[offeringIndex];
-
-          if (selectedOffering) {
-            // Display selected offering and end session
-            response = `END You selected: ${selectedOffering.data.description}. Thank you for using our service.`;
           } else {
-            response = 'END Invalid offering selection. Please try again.';
+            // User selected an offering
+            const offeringIndex = parseInt(offeringOption) - 1;
+            console.log('Offering Index:', offeringIndex);
+            console.log(
+              'Stored Offerings:',
+              this.sessionStore[sessionId].storedOfferings,
+            );
+
+            // Ensure offeringIndex is within the valid range
+            if (
+              offeringIndex >= 0 &&
+              offeringIndex <
+                this.sessionStore[sessionId].storedOfferings.length
+            ) {
+              const selectedOffering =
+                this.sessionStore[sessionId].storedOfferings[offeringIndex];
+              console.log('Selected Offering:', selectedOffering);
+
+              if (selectedOffering) {
+                // Display selected offering and end session
+                response = `END You selected: ${selectedOffering.data.description}. Thank you for using our service.`;
+              } else {
+                response = 'END Invalid offering selection. Please try again.';
+              }
+            } else {
+              response = 'END Invalid offering selection. Please try again.';
+            }
           }
+        } catch (error) {
+          console.log('Error fetching offerings:', error);
+          response = 'END Error fetching offerings. Please try again later.';
         }
         break;
 

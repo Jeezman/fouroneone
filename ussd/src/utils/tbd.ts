@@ -26,7 +26,7 @@ export const fetchOfferings = async () => {
       const _offerings = await client.getOfferings({
         pfiDid: value.uri,
       });
-      console.log('offerings is ', _offerings);
+      // console.log('offerings is ', _offerings);
       offerings.push(..._offerings);
     }
 
