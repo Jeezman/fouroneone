@@ -1,12 +1,12 @@
-import { Web5 } from '@web5/api';
-import { VerifiableCredential } from '@web5/credentials';
+import { DidDht } from '@web5/dids';
 
 export const createDid = async () => {
-  // TBD
-  const { web5, did } = await Web5.connect();
-
-  // @ts-ignore
-  const { did: bearerDid } = await web5.agent.identity.get({ didUri: did });
-
-  return { bearerDid, did };
+  try {
+    const did = await DidDht.create({
+      options: { publish: false },
+    });
+    return { did };
+  } catch (error) {
+    console.log('error creating did ', error);
+  }
 };

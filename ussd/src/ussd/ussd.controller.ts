@@ -3,15 +3,19 @@ import { UssdService } from './ussd.service';
 
 @Controller('ussd')
 export class UssdController {
-  constructor(private readonly ussdService: UssdService) {}
+  constructor(private ussdService: UssdService) {}
 
   @Post()
-  handleUssd(@Body() ussdBody: any, @Res() res) {
+  async handleUssd(@Body() ussdBody: any, @Res() res) {
     const { text, sessionId, phoneNumber } = ussdBody;
 
     console.log('USSD Body:', ussdBody);
 
-    const response = this.ussdService.processUssd(text, sessionId, phoneNumber);
+    const response = await this.ussdService.processUssd(
+      text,
+      sessionId,
+      phoneNumber,
+    );
 
     console.log('res is ', response);
     res.header('Content-Type', 'text/plain');

@@ -16,10 +16,11 @@ export class UserService {
   async create(createUserDto: CreateUserDto) {
     const user = new User();
     const did = await createDid();
+
     user.phoneNumber = createUserDto.phoneNumber;
-    user.did = did.did;
+    user.did = did.did.document.id;
     user.sessionId = createUserDto.sessionId;
-    user.serviceCode = "444"
+    user.serviceCode = '';
 
     return this.userRepository.save(user);
   }

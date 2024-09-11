@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { User } from 'src/user/entities/user.entity';
+import { UserService } from 'src/user/user.service';
 
 @Injectable()
 export class UssdService {
@@ -11,7 +12,8 @@ export class UssdService {
 
   constructor(
     private configService: ConfigService,
-    @InjectRepository(User) private userRepository: Repository<User>,
+    private userService: UserService,
+    // @InjectRepository(User) private userRepository: Repository<User>,
   ) {
     this.africasTalking = africastalking({
       apiKey: this.configService.get<string>('AFRICASTALKING_API_KEY'),
@@ -21,7 +23,7 @@ export class UssdService {
 
   // Process USSD requests
 
-  processUssd(text: string, sessionId: string, phoneNumber: string) {
+  async processUssd(text: string, sessionId: string, phoneNumber: string) {
     console.log(text, sessionId, phoneNumber);
     let response = '';
 
@@ -30,6 +32,15 @@ export class UssdService {
     switch (text) {
       case '':
         // First request. Start the response with CON
+        try {
+          await this.userService.create({
+            phoneNumber,
+            sessionId,
+          });
+        } catch (error) {
+          console.log('creating user error is ', error);
+        }
+
         response =
           'CON What would you like to check? \n1. My account \n2. My phone number';
         break;
