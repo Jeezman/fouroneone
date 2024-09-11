@@ -5,7 +5,7 @@ import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { User } from 'src/user/entities/user.entity';
 import { UserService } from 'src/user/user.service';
-import { mockProviderDids } from 'src/utils/mockPFIs';
+// import { mockProviderDids } from 'src/utils/mockPFIs';
 import axios from 'axios';
 
 @Injectable()
@@ -89,7 +89,11 @@ export class UssdService {
           'titanium_trust',
         ];
         const providerKey = providerNames[providerIndex];
-        const provider = mockProviderDids[providerKey];
+        // const provider = mockProviderDids[providerKey];
+        const provider = {
+          name: 'James',
+          uri: 'http://localhost:4000/offerings',
+        };
 
         if (!provider) {
           response = 'END Invalid provider selected. Please try again.';
