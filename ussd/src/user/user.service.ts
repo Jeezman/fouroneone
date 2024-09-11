@@ -4,7 +4,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from 'src/user/entities/user.entity';
 import { Repository } from 'typeorm';
-import { createDid } from 'src/utils/tbd';
+import { createDid, fetchOfferings } from 'src/utils/tbd';
 
 @Injectable()
 export class UserService {
@@ -39,5 +39,9 @@ export class UserService {
 
   async remove(id: number) {
     await this.userRepository.delete(id);
+  }
+
+  async getOfferings() {
+    return await fetchOfferings();
   }
 }
