@@ -6,6 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { User } from 'src/user/entities/user.entity';
 import { UserService } from 'src/user/user.service';
 import { fetchOfferings } from 'src/utils/tbd';
+import { selectCredentials } from 'src/utils/vc';
 import axios from 'axios';
 
 @Injectable()
@@ -130,15 +131,21 @@ export class UssdService {
               const countryCode = phoneNumber.substring(0, 4); // Adjust this according to the actual phone format
               // Fetch customer DID from user entity
               const customerDID = user.did;
-
+              console.log(customerDID);
+              console.log(customerName);
+              console.log(countryCode);
               try {
                 const result = await axios.get(
                   `https://mock-idv.tbddev.org/kcc?name=${customerName}&country=${countryCode}&did=${customerDID}`,
                 );
-
                 // Display the result to the user
                 const { data } = result;
-                response = `END You selected: ${selectedOffering.data.description}. Verification Result: ${data.message}. Thank you for using our service.`;
+                const verification = selectCredentials(
+                  [data],
+                  selectedOffering.data.requiredClaims,
+                );
+                console.log(verification);
+                response = `END You selected. ${selectedOffering.data.description} Thank you for using our service.`;
               } catch (error) {
                 response =
                   'END Error fetching verification result. Please try again later.';
