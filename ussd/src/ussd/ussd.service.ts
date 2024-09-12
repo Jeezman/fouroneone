@@ -91,7 +91,7 @@ export class UssdService {
         try {
           // Fetch offerings using fetchOfferings function
           const offerings = await fetchOfferings();
-          console.log('Offerings:', offerings);
+
           // Store all offerings in session
           this.sessionStore[sessionId].storedOfferings = offerings;
 
@@ -108,11 +108,6 @@ export class UssdService {
           } else {
             // User selected an offering
             const offeringIndex = parseInt(offeringOption) - 1;
-            console.log('Offering Index:', offeringIndex);
-            console.log(
-              'Stored Offerings:',
-              this.sessionStore[sessionId].storedOfferings,
-            );
 
             // Ensure offeringIndex is within the valid range
             if (
@@ -123,7 +118,7 @@ export class UssdService {
               const selectedOffering =
                 this.sessionStore[sessionId].storedOfferings[offeringIndex];
               console.log('Selected Offering:', selectedOffering);
-
+              response = `END You selected: ${selectedOffering.data.description}. Thank you for using our service.`;
               if (selectedOffering) {
                 // Display selected offering and end session
                 response = `END You selected: ${selectedOffering.data.description}. Thank you for using our service.`;
