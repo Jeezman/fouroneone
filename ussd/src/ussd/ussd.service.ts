@@ -140,11 +140,11 @@ export class UssdService {
                 );
                 // Display the result to the user
                 const { data } = result;
-                const verification = selectCredentials(
+                const verification = await selectCredentials(
                   [data],
                   selectedOffering.data.requiredClaims,
                 );
-                console.log(verification);
+                console.log('verifation', verification);
                 response = `END You selected. ${selectedOffering.data.description} Thank you for using our service.`;
               } catch (error) {
                 response =
