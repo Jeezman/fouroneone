@@ -9,12 +9,6 @@ export class UssdController {
   @Post()
   async handleUssd(@Body() ussdBody: any, @Res() res) {
     const { text, sessionId, phoneNumber, networkCode } = ussdBody;
-    this.logger.log('USSD request payload ', {
-      text,
-      sessionId,
-      phoneNumber,
-      networkCode,
-    });
 
     const response = await this.ussdService.processUssd(
       text,

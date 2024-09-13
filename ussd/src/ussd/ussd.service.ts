@@ -47,7 +47,7 @@ export class UssdService {
         storedOfferings: [],
         currentPage: 1, // Track current page of offerings
       };
-      this.logger.log('Set session store entry: ', this.sessionStore);
+      // this.logger.log('Set session store entry: ', this.sessionStore);
     }
 
     const parts = text.split('*');
@@ -55,11 +55,11 @@ export class UssdService {
     const offeringOption = parts[1]; // Selected offering or next/previous
 
     let user = await this.userRepository.findOne({ where: { phoneNumber } });
-    this.logger.log(`Get user: ${JSON.stringify(user, null, 2)}`);
+    // this.logger.log(`Get user: ${JSON.stringify(user, null, 2)}`);
 
     // If user doesn't exist, create one
     if (!user) {
-      this.logger.log('User does not exist. Create user...');
+      // this.logger.log('User does not exist. Create user...');
       try {
         user = await this.userService.create({
           phoneNumber,
@@ -146,14 +146,17 @@ export class UssdService {
                 const countryCode = phoneNumber.substring(0, 4); // Adjust this according to the actual phone format
                 // Fetch customer DID from user entity
                 const customerDID = user.did;
+                const pfiDID =
+                  this.sessionStore[sessionId].storedOfferings[offeringIndex]
+                    .metadata.from;
                 console.log('customer did', customerDID);
                 console.log('customer name ', customerName);
                 console.log('country code ', countryCode);
                 try {
                   const result = await requestVc({
                     name: customerName,
-                    country: 'NG', // TODO: Use the actual country code
-                    did: customerDID,
+                    country: countryCode, // TODO: Use the actual country code
+                    did: customerDID.did.uri,
                   });
                   // Display the result to the user
                   const { data } = result;
@@ -165,7 +168,7 @@ export class UssdService {
 
                   // Call createRfq with the required parameters including the amount
                   const rfqResult = await createRfq(
-                    customerDID,
+                    pfiDID,
                     customerDID,
                     selectedOffering,
                     verification,

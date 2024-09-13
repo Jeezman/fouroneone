@@ -19,8 +19,8 @@ export const createDid = async () => {
 };
 
 export const fetchOfferings = async () => {
-  const logger = new Logger('fetchOfferings');
-  logger.log('fetching offerings');
+  // const logger = new Logger('fetchOfferings');
+  // logger.log('fetching offerings');
   try {
     const offerings = [];
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -32,7 +32,7 @@ export const fetchOfferings = async () => {
       offerings.push(..._offerings);
     }
 
-    Logger.log(`fetched ${offerings.length} offerings`);
+    // Logger.log(`fetched ${offerings.length} offerings`);
     return offerings;
   } catch (error) {
     console.log('error fetching offerings ', error);
@@ -51,7 +51,7 @@ export const createRfq = async (
   try {
     const logger = new Logger('CREATERFQ');
     logger.log(
-      `Creating RFQ for \nAMOUNT:${amount} \nTO:${pfiDid} \nFROM:${JSON.stringify(customerDid)} \nOFFERING:${JSON.stringify(selectedOffering)}`,
+      `Creating RFQ for \nAMOUNT:${amount} \nTO:${pfiDid} \nFROM:${JSON.stringify(customerDid.did.uri)} \nOFFERING:${JSON.stringify(selectedOffering)}`,
     );
     const client = await getTbdexHttpClient();
     const Rfq = client.Rfq;
@@ -63,7 +63,7 @@ export const createRfq = async (
     const rfq = Rfq.create({
       metadata: {
         to: pfiDid,
-        from: customerDid.uri,
+        from: customerDid.did.uri,
         protocol: selectedOffering.metadata.protocol,
       },
       data: {
@@ -96,16 +96,16 @@ export const createRfq = async (
     // }
 
     try {
+      console.log(customerDid);
       await rfq.sign(customerDid);
-      console.log(rfq);
     } catch (error) {
       logger.error(`Error signing RFQ: ${error.message}`);
-      throw error; // Rethrow if needed
+      throw error;
     }
 
     let exchange;
     try {
-      exchange = await client.createExchange(rfq);
+      exchange = await client.TbdexHttpClient.createExchange(rfq);
     } catch (error) {
       logger.error(`Error creating exchange: ${error.message}`);
       throw error; // Rethrow if needed

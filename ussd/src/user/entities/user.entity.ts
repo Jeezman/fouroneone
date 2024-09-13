@@ -15,13 +15,14 @@ export class User {
   phoneNumber: string;
 
   @Column()
-  did: string;
-
-  @Column()
   sessionId: string;
 
   @Column()
   networkCode: string;
+
+  // Store the entire DID object as JSON
+  @Column('jsonb')
+  did: Record<string, any>;
 
   @CreateDateColumn()
   createdDate: Date;
