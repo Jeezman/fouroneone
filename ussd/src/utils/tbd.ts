@@ -54,6 +54,7 @@ export const createRfq = async (
       `Creating RFQ for \nAMOUNT:${amount} \nTO:${pfiDid} \nFROM:${JSON.stringify(customerDid.did.uri)} \nOFFERING:${JSON.stringify(selectedOffering)}`,
     );
     const client = await getTbdexHttpClient();
+    console.log(client);
     const Rfq = client.Rfq;
     if (!Rfq) {
       logger.error('Rfq object is undefined');
@@ -119,4 +120,39 @@ export const createRfq = async (
   } catch (error) {
     console.error('Error creating RFQ or processing exchange: ', error.message);
   }
+};
+
+export const getExchange = async (rfq, offeringDID, customerDID) => {
+  const client = await getTbdexHttpClient();
+  try {
+    const exchange = await client.TbdexHttpClient.getExchange({
+      exchangeId: rfq.exchangeId,
+      pfiDid: offeringDID,
+      did: customerDID,
+    });
+
+    return exchange;
+  } catch (error) {
+    console.log('error fetching offerings ', error);
+  }
+};
+
+export const createOrder = async (did, offering, rfq, selectedOffering) => {
+  const logger = new Logger('CREATERORDER');
+  const client = await getTbdexHttpClient();
+  const order = client.Order;
+  if (!order) {
+    logger.error('order object is undefined');
+    throw new Error('order object is undefined');
+  }
+  const create_order = order.create({
+    metadata: {
+      from: did.uri,
+      to: offering.metadata.from,
+      exchangeId: rfq.exchangeId,
+      protocol: selectedOffering.metadata.protocol,
+    },
+  });
+
+  return create_order;
 };
