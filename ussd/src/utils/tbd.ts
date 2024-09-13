@@ -9,7 +9,7 @@ async function getTbdexHttpClient() {
 export const createDid = async () => {
   try {
     const did = await DidDht.create({
-      options: { publish: false },
+      options: { publish: true },
     });
     return { did };
   } catch (error) {
