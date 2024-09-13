@@ -66,15 +66,14 @@ export const createRfq = async (
           amount: amount, // Use the passed-in amount
           paymentDetails: {
             // Assuming no required payment details for USD_BANK_TRANSFER
-            accountNumber: '1234567890', // Example account number
-            routingNumber: '123456789', // Example routing number
+            accountNumber: '1234567890',
+            routingNumber: '123456789',
           },
         },
         payout: {
           kind: selectedOffering.data.payout.methods[0].kind, // Payout method (GBP_BANK_TRANSFER)
           paymentDetails: {
             accountNumber: '3245231234', // Example payout account number
-            bankName: 'Example Bank', // Example bank name, required by the offering
           },
         },
         claims: selectedCredentials, // Array of signed VCs required by the PFI

@@ -5,7 +5,7 @@ import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { User } from 'src/user/entities/user.entity';
 import { UserService } from 'src/user/user.service';
-import { fetchOfferings } from 'src/utils/tbd';
+import { fetchOfferings, createRfq } from 'src/utils/tbd';
 import { requestVc, selectCredentials } from 'src/utils/vc';
 
 @Injectable()
@@ -55,7 +55,6 @@ export class UssdService {
     const offeringOption = parts[1]; // Selected offering or next/previous
 
     let user = await this.userRepository.findOne({ where: { phoneNumber } });
-    // this.logger.log('Get user: ', { ...user });
     this.logger.log(`Get user: ${JSON.stringify(user, null, 2)}`);
 
     // If user doesn't exist, create one
@@ -84,7 +83,6 @@ export class UssdService {
       case '4':
         // Fetch offerings based on provider selection
         const providerIndex = parseInt(mainOption) - 1;
-        console.log('provider index ', providerIndex);
         const providerNames = [
           'AquaFinance Capital',
           'Flowback Financial',
@@ -136,36 +134,51 @@ export class UssdService {
               const selectedOffering =
                 this.sessionStore[sessionId].storedOfferings[offeringIndex];
 
-              // Extract name from phone number (using phone number as the name)
-              const customerName = phoneNumber;
-              // Extract country code from phone number (assuming E.164 format like +234XXXXXXXXX)
-              const countryCode = phoneNumber.substring(0, 4); // Adjust this according to the actual phone format
-              // Fetch customer DID from user entity
-              const customerDID = user.did;
-              console.log('customer did', customerDID);
-              console.log('customer name ', customerName);
-              console.log('country code ', countryCode);
-              try {
-                const result = await requestVc({
-                  name: customerName,
-                  country: 'NG', // TODO: Use the actual country code
-                  did: customerDID,
-                });
-                // Display the result to the user
-                const { data } = result;
-                this.logger.log(
-                  `User ID ${user.id} selected: ${JSON.stringify(selectedOffering.data.description)}`,
-                );
+              // Ask the user to input the amount they wish to transfer
+              if (!parts[2]) {
+                response = `CON You selected: ${selectedOffering.data.description}. Enter the amount you wish to transfer:`;
+              } else {
+                const amount = parseFloat(parts[2]); // User input amount
 
-                const verification = await selectCredentials(
-                  [data],
-                  selectedOffering.data.requiredClaims,
-                );
-                console.log('verifation', verification);
-                response = `END You selected. ${selectedOffering.data.description} Thank you for using our service.`;
-              } catch (error) {
-                response =
-                  'END Error fetching verification result. Please try again later.';
+                // Extract name from phone number (using phone number as the name)
+                const customerName = phoneNumber;
+                // Extract country code from phone number (assuming E.164 format like +234XXXXXXXXX)
+                const countryCode = phoneNumber.substring(0, 4); // Adjust this according to the actual phone format
+                // Fetch customer DID from user entity
+                const customerDID = user.did;
+                console.log('customer did', customerDID);
+                console.log('customer name ', customerName);
+                console.log('country code ', countryCode);
+                try {
+                  const result = await requestVc({
+                    name: customerName,
+                    country: 'NG', // TODO: Use the actual country code
+                    did: customerDID,
+                  });
+                  // Display the result to the user
+                  const { data } = result;
+
+                  const verification = await selectCredentials(
+                    [data],
+                    selectedOffering.data.requiredClaims,
+                  );
+
+                  // Call createRfq with the required parameters including the amount
+                  const rfqResult = await createRfq(
+                    customerDID,
+                    customerDID,
+                    selectedOffering,
+                    verification,
+                    amount, // Pass the input amount here
+                  );
+
+                  console.log(rfqResult);
+
+                  response = `END Your RFQ has been created successfully for ${amount} units. Thank you for using our service.`;
+                } catch (error) {
+                  response =
+                    'END Error fetching verification or creating RFQ. Please try again later.';
+                }
               }
             } else {
               response = 'END Invalid offering selection. Please try again.';
