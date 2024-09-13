@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import * as africastalking from 'africastalking';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -6,13 +6,13 @@ import { ConfigService } from '@nestjs/config';
 import { User } from 'src/user/entities/user.entity';
 import { UserService } from 'src/user/user.service';
 import { fetchOfferings } from 'src/utils/tbd';
-import { selectCredentials } from 'src/utils/vc';
-import axios from 'axios';
+import { requestVc, selectCredentials } from 'src/utils/vc';
 
 @Injectable()
 export class UssdService {
   private africasTalking: any;
   private sessionStore: Record<string, any> = {}; // In-memory store for sessions
+  private readonly logger = new Logger(UssdService.name);
 
   constructor(
     private configService: ConfigService,
@@ -31,6 +31,13 @@ export class UssdService {
     phoneNumber: string,
     networkCode: string,
   ) {
+    this.logger.log('Received USSD request: ', {
+      text,
+      sessionId,
+      phoneNumber,
+      networkCode,
+    });
+
     let response = '';
 
     // Ensure session store has an entry for the sessionId
@@ -40,6 +47,7 @@ export class UssdService {
         storedOfferings: [],
         currentPage: 1, // Track current page of offerings
       };
+      this.logger.log('Set session store entry: ', this.sessionStore);
     }
 
     const parts = text.split('*');
@@ -47,15 +55,19 @@ export class UssdService {
     const offeringOption = parts[1]; // Selected offering or next/previous
 
     let user = await this.userRepository.findOne({ where: { phoneNumber } });
+    // this.logger.log('Get user: ', { ...user });
+    this.logger.log(`Get user: ${JSON.stringify(user, null, 2)}`);
 
     // If user doesn't exist, create one
     if (!user) {
+      this.logger.log('User does not exist. Create user...');
       try {
         user = await this.userService.create({
           phoneNumber,
           sessionId,
         });
       } catch (error) {
+        this.logger.error('Error creating user: ', error);
         return 'END There was an error processing your request. Please try again later.';
       }
     }
@@ -63,19 +75,18 @@ export class UssdService {
     switch (mainOption) {
       case '':
         // Main menu options
-        response = `CON Welcome ${user.phoneNumber}. Select a provider to view offerings: \n1. AquaFinance Capital \n2. SwiftLiquidity Solutions \n3. Flowback Financial \n4. Vertex Liquid Assets \n5. Titanium Trust`;
+        response = `CON Welcome ${user.phoneNumber}. Select a provider to view offerings: \n1. AquaFinance Capital \n2. Flowback Financial \n3. Vertex Liquid Assets \n4. Titanium Trust`;
         break;
 
       case '1':
       case '2':
       case '3':
       case '4':
-      case '5':
         // Fetch offerings based on provider selection
         const providerIndex = parseInt(mainOption) - 1;
+        console.log('provider index ', providerIndex);
         const providerNames = [
           'AquaFinance Capital',
-          'SwiftLiquidity Solutions',
           'Flowback Financial',
           'Vertex Liquid Assets',
           'Titanium Trust',
@@ -131,15 +142,21 @@ export class UssdService {
               const countryCode = phoneNumber.substring(0, 4); // Adjust this according to the actual phone format
               // Fetch customer DID from user entity
               const customerDID = user.did;
-              console.log(customerDID);
-              console.log(customerName);
-              console.log(countryCode);
+              console.log('customer did', customerDID);
+              console.log('customer name ', customerName);
+              console.log('country code ', countryCode);
               try {
-                const result = await axios.get(
-                  `https://mock-idv.tbddev.org/kcc?name=${customerName}&country=${countryCode}&did=${customerDID}`,
-                );
+                const result = await requestVc({
+                  name: customerName,
+                  country: 'NG', // TODO: Use the actual country code
+                  did: customerDID,
+                });
                 // Display the result to the user
                 const { data } = result;
+                this.logger.log(
+                  `User ID ${user.id} selected: ${JSON.stringify(selectedOffering.data.description)}`,
+                );
+
                 const verification = await selectCredentials(
                   [data],
                   selectedOffering.data.requiredClaims,

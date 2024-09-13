@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -12,6 +12,7 @@ export class UserService {
     @InjectRepository(User)
     private userRepository: Repository<User>,
   ) {}
+  private readonly logger = new Logger(UserService.name);
 
   async create(createUserDto: CreateUserDto) {
     const user = new User();
@@ -22,6 +23,7 @@ export class UserService {
     user.sessionId = createUserDto.sessionId;
     user.networkCode = '';
 
+    this.logger.log(`Create user ${JSON.stringify(user)}`);
     return this.userRepository.save(user);
   }
 
