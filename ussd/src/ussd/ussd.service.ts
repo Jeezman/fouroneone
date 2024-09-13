@@ -172,8 +172,6 @@ export class UssdService {
                     amount, // Pass the input amount here
                   );
 
-                  console.log(rfqResult);
-
                   response = `END Your RFQ has been created successfully for ${amount} units. Thank you for using our service.`;
                 } catch (error) {
                   response =

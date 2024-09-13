@@ -4,7 +4,7 @@ import { Logger } from '@nestjs/common';
 
 async function getTbdexHttpClient() {
   const module = await eval(`import("@tbdex/http-client")`);
-  return module.TbdexHttpClient;
+  return module;
 }
 
 export const createDid = async () => {
@@ -26,7 +26,7 @@ export const fetchOfferings = async () => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     for (const [_, value] of mockPFIs) {
       const client = await getTbdexHttpClient();
-      const _offerings = await client.getOfferings({
+      const _offerings = await client.TbdexHttpClient.getOfferings({
         pfiDid: value.uri,
       });
       offerings.push(..._offerings);
@@ -49,11 +49,14 @@ export const createRfq = async (
   amount,
 ) => {
   try {
+    const logger = new Logger('CREATERFQ');
+    logger.log(
+      `Creating RFQ for \nAMOUNT:${amount} \nTO:${pfiDid} \nFROM:${JSON.stringify(customerDid)} \nOFFERING:${JSON.stringify(selectedOffering)}`,
+    );
     const client = await getTbdexHttpClient();
-    console.log('Client:', client); // Check the client object
-
     const Rfq = client.Rfq;
     if (!Rfq) {
+      logger.error('Rfq object is undefined');
       throw new Error('Rfq object is undefined');
     }
 
@@ -67,7 +70,7 @@ export const createRfq = async (
         offeringId: selectedOffering.metadata.id,
         payin: {
           kind: selectedOffering.data.payin.methods[0].kind,
-          amount: amount,
+          amount: amount.toString(),
           paymentDetails: {
             accountNumber: '1234567890',
             routingNumber: '123456789',
@@ -82,8 +85,7 @@ export const createRfq = async (
         claims: selectedCredentials,
       },
     });
-
-    console.log('RFQ created: ', rfq);
+    logger.log(`RFQ create success ${JSON.stringify(rfq, null, 2)}`);
     return rfq;
   } catch (error) {
     console.error('Error creating RFQ: ', error.message);
