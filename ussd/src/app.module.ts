@@ -6,6 +6,8 @@ import { AppService } from './app.service';
 import { UserModule } from './user/user.module';
 import { User } from './user/entities/user.entity';
 import { UssdModule } from './ussd/ussd.module';
+import { RfqModule } from './rfq/rfq.module';
+import { WebhookModule } from './webhook/webhook.module';
 
 @Module({
   imports: [
@@ -22,6 +24,8 @@ import { UssdModule } from './ussd/ussd.module';
     }),
     UserModule,
     UssdModule,
+    RfqModule,
+    WebhookModule,
   ],
   controllers: [AppController],
   providers: [AppService],

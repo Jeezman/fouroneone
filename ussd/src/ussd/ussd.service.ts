@@ -1,16 +1,18 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import * as africastalking from 'africastalking';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { User } from 'src/user/entities/user.entity';
 import { UserService } from 'src/user/user.service';
-import { fetchOfferings } from 'src/utils/tbd';
+import { fetchOfferings, createRfq } from 'src/utils/tbd';
+import { requestVc, selectCredentials } from 'src/utils/vc';
 
 @Injectable()
 export class UssdService {
   private africasTalking: any;
   private sessionStore: Record<string, any> = {}; // In-memory store for sessions
+  private readonly logger = new Logger(UssdService.name);
 
   constructor(
     private configService: ConfigService,
@@ -29,6 +31,13 @@ export class UssdService {
     phoneNumber: string,
     networkCode: string,
   ) {
+    this.logger.log('Received USSD request: ', {
+      text,
+      sessionId,
+      phoneNumber,
+      networkCode,
+    });
+
     let response = '';
 
     // Ensure session store has an entry for the sessionId
@@ -38,6 +47,7 @@ export class UssdService {
         storedOfferings: [],
         currentPage: 1, // Track current page of offerings
       };
+      // this.logger.log('Set session store entry: ', this.sessionStore);
     }
 
     const parts = text.split('*');
@@ -45,15 +55,18 @@ export class UssdService {
     const offeringOption = parts[1]; // Selected offering or next/previous
 
     let user = await this.userRepository.findOne({ where: { phoneNumber } });
+    // this.logger.log(`Get user: ${JSON.stringify(user, null, 2)}`);
 
     // If user doesn't exist, create one
     if (!user) {
+      // this.logger.log('User does not exist. Create user...');
       try {
         user = await this.userService.create({
           phoneNumber,
           sessionId,
         });
       } catch (error) {
+        this.logger.error('Error creating user: ', error);
         return 'END There was an error processing your request. Please try again later.';
       }
     }
@@ -61,19 +74,17 @@ export class UssdService {
     switch (mainOption) {
       case '':
         // Main menu options
-        response = `CON Welcome ${user.phoneNumber}. Select a provider to view offerings: \n1. AquaFinance Capital \n2. SwiftLiquidity Solutions \n3. Flowback Financial \n4. Vertex Liquid Assets \n5. Titanium Trust`;
+        response = `CON Welcome ${user.phoneNumber}. Select a provider to view offerings: \n1. AquaFinance Capital \n2. Flowback Financial \n3. Vertex Liquid Assets \n4. Titanium Trust`;
         break;
 
       case '1':
       case '2':
       case '3':
       case '4':
-      case '5':
         // Fetch offerings based on provider selection
         const providerIndex = parseInt(mainOption) - 1;
         const providerNames = [
           'AquaFinance Capital',
-          'SwiftLiquidity Solutions',
           'Flowback Financial',
           'Vertex Liquid Assets',
           'Titanium Trust',
@@ -81,16 +92,14 @@ export class UssdService {
         const providerName = providerNames[providerIndex];
 
         try {
-          // Fetch offerings and store in session
           const offerings = await fetchOfferings();
           this.sessionStore[sessionId].storedOfferings = offerings;
 
           const itemsPerPage = 4;
-          let currentPage = this.sessionStore[sessionId].currentPage;
+          const currentPage = this.sessionStore[sessionId].currentPage;
           const totalPages = Math.ceil(offerings.length / itemsPerPage);
 
           if (!offeringOption) {
-            // Display offerings for current page
             const startIndex = (currentPage - 1) * itemsPerPage;
             const endIndex = Math.min(
               startIndex + itemsPerPage,
@@ -102,12 +111,10 @@ export class UssdService {
             if (offerings.length === 0) {
               response = 'END No offerings available.';
             } else {
-              // Display current offerings
               currentOfferings.forEach((offering: any, index: number) => {
                 response += `${startIndex + index + 1}. ${offering.data.description} \n`;
               });
 
-              // Add Next and Previous options if applicable
               if (currentPage < totalPages) {
                 response += `${endIndex + 1}. Next \n`;
               }
@@ -115,58 +122,8 @@ export class UssdService {
                 response += `0. Previous \n`; // Always display Previous as 0
               }
             }
-          } else if (
-            offeringOption ===
-              `${(currentPage - 1) * itemsPerPage + itemsPerPage + 1}` &&
-            currentPage < totalPages
-          ) {
-            // Next option selected
-            this.sessionStore[sessionId].currentPage += 1;
-            currentPage = this.sessionStore[sessionId].currentPage;
-
-            // Show next page of offerings
-            const startIndex = (currentPage - 1) * itemsPerPage;
-            const endIndex = Math.min(
-              startIndex + itemsPerPage,
-              offerings.length,
-            );
-            const nextOfferings = offerings.slice(startIndex, endIndex);
-
-            response = `CON Select an offering to proceed:\n`;
-            nextOfferings.forEach((offering: any, index: number) => {
-              response += `${startIndex + index + 1}. ${offering.data.description} \n`;
-            });
-
-            if (currentPage < totalPages) {
-              response += `${endIndex + 1}. Next \n`;
-            }
-            response += `0. Previous \n`; // Always display Previous as 0
-          } else if (offeringOption === '0' && currentPage > 1) {
-            // Previous option selected (value is always 0)
-            this.sessionStore[sessionId].currentPage -= 1;
-            currentPage = this.sessionStore[sessionId].currentPage;
-
-            // Show previous page of offerings
-            const startIndex = (currentPage - 1) * itemsPerPage;
-            const endIndex = Math.min(
-              startIndex + itemsPerPage,
-              offerings.length,
-            );
-            const prevOfferings = offerings.slice(startIndex, endIndex);
-
-            response = `CON Select an offering to proceed:\n`;
-            prevOfferings.forEach((offering: any, index: number) => {
-              response += `${startIndex + index + 1}. ${offering.data.description} \n`;
-            });
-
-            if (currentPage < totalPages) {
-              response += `${endIndex + 1}. Next \n`;
-            }
-            if (currentPage > 1) {
-              response += `0. Previous \n`; // Always display Previous as 0
-            }
           } else {
-            // Ensure that '0' doesn't get treated as a valid offering index
+            // Offering selection
             const offeringIndex = parseInt(offeringOption) - 1;
 
             if (
@@ -177,7 +134,53 @@ export class UssdService {
               const selectedOffering =
                 this.sessionStore[sessionId].storedOfferings[offeringIndex];
 
-              response = `END You selected: ${selectedOffering.data.description}. Thank you for using our service.`;
+              // Ask the user to input the amount they wish to transfer
+              if (!parts[2]) {
+                response = `CON You selected: ${selectedOffering.data.description}. Enter the amount you wish to transfer:`;
+              } else {
+                const amount = parseFloat(parts[2]).toString(); // User input amount
+
+                // Extract name from phone number (using phone number as the name)
+                const customerName = phoneNumber;
+                // Extract country code from phone number (assuming E.164 format like +234XXXXXXXXX)
+                const countryCode = phoneNumber.substring(0, 4); // Adjust this according to the actual phone format
+                // Fetch customer DID from user entity
+                const customerDID = user.did;
+                const pfiDID =
+                  this.sessionStore[sessionId].storedOfferings[offeringIndex]
+                    .metadata.from;
+                console.log('customer did', customerDID);
+                console.log('customer name ', customerName);
+                console.log('country code ', countryCode);
+                try {
+                  const result = await requestVc({
+                    name: customerName,
+                    country: countryCode, // TODO: Use the actual country code
+                    did: customerDID.uri,
+                  });
+                  // Display the result to the user
+                  const { data } = result;
+
+                  const verification = await selectCredentials(
+                    [data],
+                    selectedOffering.data.requiredClaims,
+                  );
+
+                  // Call createRfq with the required parameters including the amount
+                  const rfqResult = await createRfq(
+                    pfiDID,
+                    customerDID,
+                    selectedOffering,
+                    verification,
+                    amount, // Pass the input amount here
+                  );
+
+                  response = `END Your RFQ has been created successfully for ${amount} units. Thank you for using our service.`;
+                } catch (error) {
+                  response =
+                    'END Error fetching verification or creating RFQ. Please try again later.';
+                }
+              }
             } else {
               response = 'END Invalid offering selection. Please try again.';
             }
