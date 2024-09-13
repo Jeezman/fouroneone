@@ -38,3 +38,52 @@ export const fetchOfferings = async () => {
     console.log('error fetching offerings ', error);
   }
 };
+
+// New function to create RFQ
+
+export const createRfq = async (
+  pfiDid,
+  customerDid,
+  selectedOffering,
+  selectedCredentials,
+  amount, // New parameter for the payin amount
+) => {
+  try {
+    const client = await getTbdexHttpClient();
+    const Rfq = client.Rfq;
+
+    // Create RFQ
+    const rfq = Rfq.create({
+      metadata: {
+        to: pfiDid, // PFI's DID
+        from: customerDid.uri, // Customer DID
+        protocol: selectedOffering.metadata.protocol, // Protocol version from offering
+      },
+      data: {
+        offeringId: selectedOffering.metadata.id, // The ID of the selected offering
+        payin: {
+          kind: selectedOffering.data.payin.methods[0].kind, // Payin method (USD_BANK_TRANSFER)
+          amount: amount, // Use the passed-in amount
+          paymentDetails: {
+            // Assuming no required payment details for USD_BANK_TRANSFER
+            accountNumber: '1234567890', // Example account number
+            routingNumber: '123456789', // Example routing number
+          },
+        },
+        payout: {
+          kind: selectedOffering.data.payout.methods[0].kind, // Payout method (GBP_BANK_TRANSFER)
+          paymentDetails: {
+            accountNumber: '3245231234', // Example payout account number
+            bankName: 'Example Bank', // Example bank name, required by the offering
+          },
+        },
+        claims: selectedCredentials, // Array of signed VCs required by the PFI
+      },
+    });
+
+    console.log('RFQ created: ', rfq);
+    return rfq;
+  } catch (error) {
+    console.log('Error creating RFQ: ', error);
+  }
+};
