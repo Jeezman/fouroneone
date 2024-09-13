@@ -1,13 +1,20 @@
-import { Controller, Post, Body, Res } from '@nestjs/common';
+import { Controller, Post, Body, Res, Logger } from '@nestjs/common';
 import { UssdService } from './ussd.service';
 
 @Controller('ussd')
 export class UssdController {
   constructor(private ussdService: UssdService) {}
+  private readonly logger = new Logger(UssdController.name);
 
   @Post()
   async handleUssd(@Body() ussdBody: any, @Res() res) {
     const { text, sessionId, phoneNumber, networkCode } = ussdBody;
+    this.logger.log('USSD request payload ', {
+      text,
+      sessionId,
+      phoneNumber,
+      networkCode,
+    });
 
     const response = await this.ussdService.processUssd(
       text,

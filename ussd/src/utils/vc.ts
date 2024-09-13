@@ -1,21 +1,33 @@
+import { Logger } from '@nestjs/common';
 import { PresentationExchange } from '@web5/credentials';
+import axios from 'axios';
+
+export const requestVc = async ({ name, country, did }) => {
+  try {
+    const response = await axios.get(
+      `https://mock-idv.tbddev.org/kcc?name=${name}&country=${country}&did=${did}`,
+    );
+    return response;
+  } catch (error) {
+    console.log(error.message);
+  }
+};
 
 export const selectCredentials = (customerCredentials, requiredClaims) => {
+  const logger = new Logger('SelectCredentials');
   // Log the inputs to ensure they are as expected
-  console.log(
-    'Customer Credentials:',
-    JSON.stringify(customerCredentials, null, 2),
+  logger.log(
+    `Select Credentials - required claims ${JSON.stringify(requiredClaims)}`,
   );
-  console.log('Required Claims:', JSON.stringify(requiredClaims, null, 2));
 
   // Check if customer credentials are present and requiredClaims is defined
   if (!customerCredentials || customerCredentials.length === 0) {
-    console.error('No customer credentials available.');
+    logger.warn('No customer credentials available.');
     return [];
   }
 
   if (!requiredClaims) {
-    console.error('No required claims provided.');
+    logger.warn('No required claims provided.');
     return [];
   }
 
@@ -27,14 +39,14 @@ export const selectCredentials = (customerCredentials, requiredClaims) => {
 
     // Check if selected credentials are empty
     if (selected.length === 0) {
-      console.warn('No matching credentials found.');
+      logger.warn('No matching credentials found.');
     } else {
-      console.log('Selected Credentials:', JSON.stringify(selected, null, 2));
+      logger.log('Selected Credentials successfully');
     }
 
     return selected;
   } catch (error) {
-    console.error('Error during credential selection:', error);
+    logger.error(`Error selecting credential ${error}`);
     return [];
   }
 };
