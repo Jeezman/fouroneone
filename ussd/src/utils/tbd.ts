@@ -72,22 +72,51 @@ export const createRfq = async (
           kind: selectedOffering.data.payin.methods[0].kind,
           amount: amount.toString(),
           paymentDetails: {
-            accountNumber: '1234567890',
-            routingNumber: '123456789',
+            accountNumber: '123456789',
+            routingNumber: '123455533',
           },
         },
         payout: {
           kind: selectedOffering.data.payout.methods[0].kind,
           paymentDetails: {
-            accountNumber: '3245231234',
+            accountNumber: '123456789',
+            IBAN: '1323233234',
           },
         },
         claims: selectedCredentials,
       },
     });
+
     logger.log(`RFQ create success ${JSON.stringify(rfq, null, 2)}`);
-    return rfq;
+    // try {
+    //   await rfq.verifyOfferingRequirements(selectedOffering);
+    // } catch (error) {
+    //   logger.error(`Error verifying offering requirements: ${error.message}`);
+    //   throw error; // Rethrow if needed to stop further execution
+    // }
+
+    try {
+      await rfq.sign(customerDid);
+      console.log(rfq);
+    } catch (error) {
+      logger.error(`Error signing RFQ: ${error.message}`);
+      throw error; // Rethrow if needed
+    }
+
+    let exchange;
+    try {
+      exchange = await client.createExchange(rfq);
+    } catch (error) {
+      logger.error(`Error creating exchange: ${error.message}`);
+      throw error; // Rethrow if needed
+    }
+
+    logger.log(
+      `Exchange created successfully: ${JSON.stringify(exchange, null, 2)}`,
+    );
+
+    return { rfq, exchange };
   } catch (error) {
-    console.error('Error creating RFQ: ', error.message);
+    console.error('Error creating RFQ or processing exchange: ', error.message);
   }
 };
