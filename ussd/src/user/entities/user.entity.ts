@@ -1,3 +1,4 @@
+import { PortableDid } from '@web5/dids';
 import {
   Entity,
   Column,
@@ -22,7 +23,7 @@ export class User {
 
   // Store the entire DID object as JSON
   @Column('jsonb')
-  did: Record<string, any>;
+  did: PortableDid;
 
   @CreateDateColumn()
   createdDate: Date;

@@ -138,7 +138,7 @@ export class UssdService {
               if (!parts[2]) {
                 response = `CON You selected: ${selectedOffering.data.description}. Enter the amount you wish to transfer:`;
               } else {
-                const amount = parseFloat(parts[2]); // User input amount
+                const amount = parseFloat(parts[2]).toString(); // User input amount
 
                 // Extract name from phone number (using phone number as the name)
                 const customerName = phoneNumber;
@@ -156,7 +156,7 @@ export class UssdService {
                   const result = await requestVc({
                     name: customerName,
                     country: countryCode, // TODO: Use the actual country code
-                    did: customerDID.did.uri,
+                    did: customerDID.uri,
                   });
                   // Display the result to the user
                   const { data } = result;

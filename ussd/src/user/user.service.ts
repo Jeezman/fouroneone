@@ -19,7 +19,7 @@ export class UserService {
     const did = await createDid();
 
     user.phoneNumber = createUserDto.phoneNumber;
-    user.did = did;
+    user.did = did.did;
     user.sessionId = createUserDto.sessionId;
     user.networkCode = '';
 

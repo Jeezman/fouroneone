@@ -1,4 +1,4 @@
-import { DidDht } from '@web5/dids';
+import { DidDht, BearerDid, PortableDid } from '@web5/dids';
 import { mockPFIs } from './mockPFIs';
 import { Logger } from '@nestjs/common';
 
@@ -9,9 +9,10 @@ async function getTbdexHttpClient() {
 
 export const createDid = async () => {
   try {
-    const did = await DidDht.create({
+    const _did: BearerDid = await DidDht.create({
       options: { publish: true },
     });
+    const did = await _did.export();
     return { did };
   } catch (error) {
     console.log('error creating did ', error);
@@ -19,8 +20,7 @@ export const createDid = async () => {
 };
 
 export const fetchOfferings = async () => {
-  // const logger = new Logger('fetchOfferings');
-  // logger.log('fetching offerings');
+  Logger.log('fetching offerings');
   try {
     const offerings = [];
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -32,26 +32,24 @@ export const fetchOfferings = async () => {
       offerings.push(..._offerings);
     }
 
-    // Logger.log(`fetched ${offerings.length} offerings`);
+    Logger.log(`fetched ${offerings.length} offerings`);
     return offerings;
   } catch (error) {
     console.log('error fetching offerings ', error);
   }
 };
 
-// New function to create RFQ
-
 export const createRfq = async (
-  pfiDid,
-  customerDid,
+  pfiDid: string,
+  customerDid: PortableDid,
   selectedOffering,
   selectedCredentials,
-  amount,
+  amount: string,
 ) => {
   try {
     const logger = new Logger('CREATERFQ');
     logger.log(
-      `Creating RFQ for \nAMOUNT:${amount} \nTO:${pfiDid} \nFROM:${JSON.stringify(customerDid.did.uri)} \nOFFERING:${JSON.stringify(selectedOffering)}`,
+      `Creating RFQ for \nAMOUNT:${amount} \nTO:${pfiDid} \nFROM:${JSON.stringify(customerDid)} \nOFFERING:${JSON.stringify(selectedOffering)}`,
     );
     const client = await getTbdexHttpClient();
     console.log(client);
@@ -60,11 +58,11 @@ export const createRfq = async (
       logger.error('Rfq object is undefined');
       throw new Error('Rfq object is undefined');
     }
-
+    const importCustomerDid = await DidDht.import({ portableDid: customerDid });
     const rfq = Rfq.create({
       metadata: {
         to: pfiDid,
-        from: customerDid.did.uri,
+        from: importCustomerDid.uri,
         protocol: selectedOffering.metadata.protocol,
       },
       data: {
@@ -81,42 +79,38 @@ export const createRfq = async (
           kind: selectedOffering.data.payout.methods[0].kind,
           paymentDetails: {
             accountNumber: '123456789',
-            IBAN: '1323233234',
           },
         },
         claims: selectedCredentials,
       },
     });
-
-    logger.log(`RFQ create success ${JSON.stringify(rfq, null, 2)}`);
-    // try {
-    //   await rfq.verifyOfferingRequirements(selectedOffering);
-    // } catch (error) {
-    //   logger.error(`Error verifying offering requirements: ${error.message}`);
-    //   throw error; // Rethrow if needed to stop further execution
-    // }
+    logger.log(`RFQ create success ${JSON.stringify(rfq)}`);
+    try {
+      logger.log(`RFQ verify offering`);
+      await rfq.verifyOfferingRequirements(selectedOffering);
+    } catch (error) {
+      logger.error(`Error verifying offering requirements: ${error.message}`);
+      throw error; // Rethrow if needed to stop further execution
+    }
 
     try {
-      console.log(customerDid);
-      await rfq.sign(customerDid);
+      logger.log(`RFQ SIGN: ${JSON.stringify(importCustomerDid)}`);
+      await rfq.sign(importCustomerDid);
+      logger.log(`RFQ SIGN SUCCESS`);
     } catch (error) {
       logger.error(`Error signing RFQ: ${error.message}`);
       throw error;
     }
 
-    let exchange;
     try {
-      exchange = await client.TbdexHttpClient.createExchange(rfq);
+      await client.TbdexHttpClient.createExchange(rfq);
+      logger.log(`Exchange created successfully`);
     } catch (error) {
       logger.error(`Error creating exchange: ${error.message}`);
       throw error; // Rethrow if needed
     }
 
-    logger.log(
-      `Exchange created successfully: ${JSON.stringify(exchange, null, 2)}`,
-    );
-
-    return { rfq, exchange };
+    return { rfq };
   } catch (error) {
     console.error('Error creating RFQ or processing exchange: ', error.message);
   }
