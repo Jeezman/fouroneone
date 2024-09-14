@@ -202,9 +202,11 @@ export class UssdService {
                   this.logger.log('RFQ Result: ', rfqResult);
 
                   response = `END Your Tx for ${amount} units - Status: ${rfqResult.transactionStatus.reasonForClose}. \nThank you for using our service.`;
+                  return response;
                 } catch (error) {
                   this.logger.error('Error creating RFQ: ', error);
                   response = 'END Error creating RFQ. Please try again later.';
+                  return response;
                 }
               } else if (rfqConfirmation === '2') {
                 // User chose to cancel RFQ creation
