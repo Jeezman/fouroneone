@@ -24,7 +24,6 @@ export class UssdService {
       username: this.configService.get<string>('AFRICASTALKING_USERNAME'),
     });
   }
-
   async processUssd(
     text: string,
     sessionId: string,
@@ -40,26 +39,28 @@ export class UssdService {
 
     let response = '';
 
-    // Ensure session store has an entry for the sessionId
     if (!this.sessionStore[sessionId]) {
       this.sessionStore[sessionId] = {
         providerUri: null,
         storedOfferings: [],
-        currentPage: 1, // Track current page of offerings
+        currentPage: 1,
+        credentialData: {},
+        credentialConfirmed: false,
+        rfqConfirmation: null, // Field to track RFQ confirmation
       };
-      // this.logger.log('Set session store entry: ', this.sessionStore);
     }
 
     const parts = text.split('*');
-    const mainOption = parts[0]; // Main menu option
-    const offeringOption = parts[1]; // Selected offering or next/previous
+    const mainOption = parts[0];
+    const offeringOption = parts[1];
+    const amount = parts[2];
+    const credentialStep = parts[3];
+    const credentialConfirmed = parts[4];
+    const rfqConfirmation = parts[5];
 
     let user = await this.userRepository.findOne({ where: { phoneNumber } });
-    // this.logger.log(`Get user: ${JSON.stringify(user, null, 2)}`);
 
-    // If user doesn't exist, create one
     if (!user) {
-      // this.logger.log('User does not exist. Create user...');
       try {
         user = await this.userService.create({
           phoneNumber,
@@ -81,7 +82,6 @@ export class UssdService {
       case '2':
       case '3':
       case '4':
-        // Fetch offerings based on provider selection
         const providerIndex = parseInt(mainOption) - 1;
         const providerNames = [
           'AquaFinance Capital',
@@ -119,11 +119,10 @@ export class UssdService {
                 response += `${endIndex + 1}. Next \n`;
               }
               if (currentPage > 1) {
-                response += `0. Previous \n`; // Always display Previous as 0
+                response += `0. Previous \n`;
               }
             }
           } else {
-            // Offering selection
             const offeringIndex = parseInt(offeringOption) - 1;
 
             if (
@@ -135,51 +134,84 @@ export class UssdService {
                 this.sessionStore[sessionId].storedOfferings[offeringIndex];
 
               // Ask the user to input the amount they wish to transfer
-              if (!parts[2]) {
+              if (!amount) {
                 response = `CON You selected: ${selectedOffering.data.description}. Enter the amount you wish to transfer:`;
-              } else {
-                const amount = parseFloat(parts[2]).toString(); // User input amount
+              } else if (!credentialStep) {
+                // Step: Ask for credential creation (first name)
+                response = `CON Enter your first name to create your credentials:`;
+              } else if (
+                !this.sessionStore[sessionId].credentialData.firstName
+              ) {
+                this.sessionStore[sessionId].credentialData.firstName =
+                  credentialStep;
+                response = `CON Enter your last name:`;
+              } else if (
+                !this.sessionStore[sessionId].credentialData.lastName
+              ) {
+                this.sessionStore[sessionId].credentialData.lastName =
+                  credentialStep;
 
-                // Extract name from phone number (using phone number as the name)
-                const customerName = phoneNumber;
-                // Extract country code from phone number (assuming E.164 format like +234XXXXXXXXX)
-                const countryCode = phoneNumber.substring(0, 4); // Adjust this according to the actual phone format
-                // Fetch customer DID from user entity
+                // Step: Ask to confirm credential selection
+                response = `CON Would you like to proceed with credential selection?\n1. Yes\n2. No`;
+              } else if (!credentialConfirmed) {
+                response = `CON Please confirm credential selection:\n1. Yes\n2. No`;
+              } else if (credentialConfirmed === '1') {
+                // Proceed with credential selection
+                const customerName = `${this.sessionStore[sessionId].credentialData.firstName} ${this.sessionStore[sessionId].credentialData.lastName}`;
                 const customerDID = user.did;
-                const pfiDID =
-                  this.sessionStore[sessionId].storedOfferings[offeringIndex]
-                    .metadata.from;
-                console.log('customer did', customerDID);
-                console.log('customer name ', customerName);
-                console.log('country code ', countryCode);
+
+                // Extract country code from phone number
+                const countryCode = phoneNumber.substring(0, 4);
+
                 try {
+                  // New step for credential selection with country code
                   const result = await requestVc({
                     name: customerName,
-                    country: countryCode, // TODO: Use the actual country code
+                    country: countryCode,
                     did: customerDID.uri,
                   });
-                  // Display the result to the user
+
                   const { data } = result;
 
+                  // Separate credential selection step
                   const verification = await selectCredentials(
                     [data],
                     selectedOffering.data.requiredClaims,
                   );
 
-                  // Call createRfq with the required parameters including the amount
+                  // Store the selected credentials for future steps
+                  this.sessionStore[sessionId].credentialConfirmed = true;
+
+                  // Step: Ask to create RFQ
+                  response = `CON Credentials confirmed. Would you like to create an RFQ for ${amount} units?\n1. Yes\n2. No`;
+                } catch (error) {
+                  response =
+                    'END Error selecting credentials. Please try again later.';
+                }
+              } else if (rfqConfirmation === '1') {
+                // Proceed with RFQ creation
+                const pfiDID =
+                  this.sessionStore[sessionId].storedOfferings[offeringIndex]
+                    .metadata.from;
+
+                try {
                   const rfqResult = await createRfq(
                     pfiDID,
-                    customerDID,
+                    user.did,
                     selectedOffering,
-                    verification,
-                    amount, // Pass the input amount here
+                    this.sessionStore[sessionId].credentialData,
+                    amount,
                   );
 
                   response = `END Your Tx for ${amount} units - Status: ${rfqResult.transactionStatus.reasonForClose}. \nThank you for using our service.`;
                 } catch (error) {
-                  response =
-                    'END Error fetching verification or creating RFQ. Please try again later.';
+                  response = 'END Error creating RFQ. Please try again later.';
                 }
+              } else if (rfqConfirmation === '2') {
+                // User chose to cancel RFQ creation
+                response = `END RFQ creation has been cancelled. Thank you for using our service.`;
+              } else {
+                response = `END Invalid choice. Please try again.`;
               }
             } else {
               response = 'END Invalid offering selection. Please try again.';
