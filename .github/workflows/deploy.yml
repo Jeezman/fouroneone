@@ -44,11 +44,10 @@ jobs:
             script: |
               pwd
               echo $HOME
-              cd /home/${{ secrets.DROPLET_USER }}
+              cd /home/${{ secrets.DROPLET_USER }}/dev/fouroneone
               pwd
-              # cd /dev/fouroneone
               # git pull
-              # git checkout new-flow
-              # cd /ussd
+              git checkout new-flow
+              cd /home/${{ secrets.DROPLET_USER }}/dev/fouroneone/ussd
               # npm run build
               # pm2 restart ussd
