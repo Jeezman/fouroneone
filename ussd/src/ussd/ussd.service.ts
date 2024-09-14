@@ -199,9 +199,11 @@ export class UssdService {
                     verification,
                     amount,
                   );
+                  this.logger.log('RFQ Result: ', rfqResult);
 
                   response = `END Your Tx for ${amount} units - Status: ${rfqResult.transactionStatus.reasonForClose}. \nThank you for using our service.`;
                 } catch (error) {
+                  this.logger.error('Error creating RFQ: ', error);
                   response = 'END Error creating RFQ. Please try again later.';
                 }
               } else if (rfqConfirmation === '2') {
