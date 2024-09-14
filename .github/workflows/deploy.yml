@@ -44,7 +44,7 @@ jobs:
             script: |
               pwd
               echo $HOME
-              cd /home
+              cd /home/${{ secrets.DROPLET_USER }}
               pwd
               # cd /dev/fouroneone
               # git pull
