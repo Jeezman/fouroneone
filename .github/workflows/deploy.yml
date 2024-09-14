@@ -44,6 +44,8 @@ jobs:
             script: |
               pwd
               echo $HOME
+              cd /home
+              pwd
               # cd /dev/fouroneone
               # git pull
               # git checkout new-flow
