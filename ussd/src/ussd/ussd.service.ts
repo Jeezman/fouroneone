@@ -190,9 +190,9 @@ export class UssdService {
                   response =
                     'END Error selecting credentials. Please try again later.';
                 }
-              } else if (rfqConfirmation === '1') {
+              }
+              if (rfqConfirmation === '1') {
                 // Proceed with RFQ creation
-                // Retrieve the stored verification object from session
                 const verification = this.sessionStore[sessionId].verification;
                 const pfiDID =
                   this.sessionStore[sessionId].storedOfferings[offeringIndex]
@@ -211,40 +211,44 @@ export class UssdService {
                   // Store the rfqResult in sessionStore
                   this.sessionStore[sessionId].rfqResult = rfqResult;
 
+                  // Transition to quote confirmation
                   response = `CON Your Tx for ${amount} units - Created Successfully. \nWould you like to proceed with the quote?\n1. Proceed\n2. Cancel`;
-                  return response;
+                  return response; // Ensure the response is returned to the user
                 } catch (error) {
                   this.logger.error('Error creating RFQ: ', error);
                   response = 'END Error creating RFQ. Please try again later.';
-                  return response;
+                  return response; // Ensure error response is returned
                 }
               } else if (rfqConfirmation === '2') {
-                // User chose to cancel RFQ creation
                 response = `END RFQ creation has been cancelled. Thank you for using our service.`;
               } else if (quoteConfirmation === '1') {
-                // User selected to proceed with the quote
+                // Proceed with quote processing
                 const pfiDID =
                   this.sessionStore[sessionId].storedOfferings[offeringIndex]
                     .metadata.from;
                 const selectedOffering =
                   this.sessionStore[sessionId].storedOfferings[offeringIndex];
                 const customerDid = this.sessionStore[sessionId].customerDID;
-                console.log(this.sessionStore[sessionId].rfqResult);
-                console.log(pfiDID);
-                console.log(selectedOffering);
-                console.log(customerDid);
-                // const placeOrderResult = await placeOrder(
-                //   customerDid,
-                //   pfiDID,
-                //   exchangeId,
-                //   selectedOffering,
-                // );
-                response = `END Quote processing complete. Thank you for using our service.`;
-                return response;
+
+                try {
+                  const placeOrderResult = await placeOrder(
+                    customerDid,
+                    pfiDID,
+                    this.sessionStore[sessionId].rfqResult.data.exchangeId,
+                    selectedOffering,
+                  );
+
+                  this.logger.log('Place order result: ', placeOrderResult);
+                  response = `END Quote processing complete. Thank you for using our service.`;
+                  return response;
+                } catch (error) {
+                  this.logger.error('Error processing quote: ', error);
+                  response =
+                    'END Error processing quote. Please try again later.';
+                  return response;
+                }
               } else if (quoteConfirmation === '2') {
-                // User selected to cancel the quote
                 response = `END Quote processing cancelled. Thank you for using our service.`;
-                return response;
               } else {
                 response = `END Invalid choice. Please try again.`;
               }
