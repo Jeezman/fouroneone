@@ -175,7 +175,7 @@ export class UssdService {
                     amount, // Pass the input amount here
                   );
 
-                  response = `END Your RFQ has been created successfully for ${amount} units. Thank you for using our service.`;
+                  response = `END Your Tx for ${amount} units - Status: ${rfqResult.transactionStatus.reasonForClose}. \nThank you for using our service.`;
                 } catch (error) {
                   response =
                     'END Error fetching verification or creating RFQ. Please try again later.';
