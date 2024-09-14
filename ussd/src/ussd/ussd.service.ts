@@ -5,7 +5,7 @@ import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { User } from 'src/user/entities/user.entity';
 import { UserService } from 'src/user/user.service';
-import { fetchOfferings, createRfq } from 'src/utils/tbd';
+import { fetchOfferings, createRfq, placeOrder } from 'src/utils/tbd';
 import { requestVc, selectCredentials } from 'src/utils/vc';
 
 @Injectable()
@@ -47,6 +47,9 @@ export class UssdService {
         credentialData: {},
         credentialConfirmed: false,
         rfqConfirmation: null, // Field to track RFQ confirmation
+        quoteConfirmation: null,
+        customerDID: null,
+        rfqResult: null,
       };
     }
 
@@ -57,6 +60,7 @@ export class UssdService {
     const credentialStep = parts[3];
     const credentialConfirmed = parts[4];
     const rfqConfirmation = parts[5];
+    const quoteConfirmation = parts[6];
 
     let user = await this.userRepository.findOne({ where: { phoneNumber } });
 
@@ -71,6 +75,9 @@ export class UssdService {
         return 'END There was an error processing your request. Please try again later.';
       }
     }
+
+    // Store customerDID in sessionStore for the entire session
+    this.sessionStore[sessionId].customerDID = user.did;
 
     switch (mainOption) {
       case '':
@@ -201,7 +208,10 @@ export class UssdService {
                   );
                   this.logger.log('RFQ Result: ', rfqResult);
 
-                  response = `END Your Tx for ${amount} units - Status: ${rfqResult.transactionStatus.reasonForClose}. \nThank you for using our service.`;
+                  // Store the rfqResult in sessionStore
+                  this.sessionStore[sessionId].rfqResult = rfqResult;
+
+                  response = `CON Your Tx for ${amount} units - Created Successfully. \nWould you like to proceed with the quote?\n1. Proceed\n2. Cancel`;
                   return response;
                 } catch (error) {
                   this.logger.error('Error creating RFQ: ', error);
@@ -211,6 +221,30 @@ export class UssdService {
               } else if (rfqConfirmation === '2') {
                 // User chose to cancel RFQ creation
                 response = `END RFQ creation has been cancelled. Thank you for using our service.`;
+              } else if (quoteConfirmation === '1') {
+                // User selected to proceed with the quote
+                const pfiDID =
+                  this.sessionStore[sessionId].storedOfferings[offeringIndex]
+                    .metadata.from;
+                const selectedOffering =
+                  this.sessionStore[sessionId].storedOfferings[offeringIndex];
+                const customerDid = this.sessionStore[sessionId].customerDID;
+                console.log(this.sessionStore[sessionId].rfqResult);
+                console.log(pfiDID);
+                console.log(selectedOffering);
+                console.log(customerDid);
+                // const placeOrderResult = await placeOrder(
+                //   customerDid,
+                //   pfiDID,
+                //   exchangeId,
+                //   selectedOffering,
+                // );
+                response = `END Quote processing complete. Thank you for using our service.`;
+                return response;
+              } else if (quoteConfirmation === '2') {
+                // User selected to cancel the quote
+                response = `END Quote processing cancelled. Thank you for using our service.`;
+                return response;
               } else {
                 response = `END Invalid choice. Please try again.`;
               }
