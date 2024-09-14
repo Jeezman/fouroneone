@@ -47,7 +47,6 @@ jobs:
               cd /home/${{ secrets.DROPLET_USER }}/dev/fouroneone
               pwd
               # git pull
-              git checkout new-flow
               cd /home/${{ secrets.DROPLET_USER }}/dev/fouroneone/ussd
-              # npm run build
+              npm run build
               # pm2 restart ussd
