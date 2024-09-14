@@ -49,6 +49,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           script: |
+            source ~/.bashrc
             pwd
             cd /home/${{ secrets.DROPLET_USER }}/dev/fouroneone
             git pull
