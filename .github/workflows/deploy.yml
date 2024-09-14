@@ -43,9 +43,10 @@ jobs:
             passphrase: ${{ secrets.SSH_PASSPHRASE }}
             script: |
               pwd
+              echo $HOME
               # cd /dev/fouroneone
               # git pull
               # git checkout new-flow
               # cd /ussd
-              npm run build
-              pm2 restart ussd
+              # npm run build
+              # pm2 restart ussd
