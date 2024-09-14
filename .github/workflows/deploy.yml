@@ -42,9 +42,10 @@ jobs:
             key: ${{ secrets.SSH_PRIVATE_KEY }}
             passphrase: ${{ secrets.SSH_PASSPHRASE }}
             script: |
-              cd /dev/fouroneone
-              git pull
-              git checkout new-flow
-              cd /ussd
+              pwd
+              # cd /dev/fouroneone
+              # git pull
+              # git checkout new-flow
+              # cd /ussd
               npm run build
               pm2 restart ussd
