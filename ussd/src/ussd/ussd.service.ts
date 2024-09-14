@@ -138,17 +138,9 @@ export class UssdService {
                 response = `CON You selected: ${selectedOffering.data.description}. Enter the amount you wish to transfer:`;
               } else if (!credentialStep) {
                 // Step: Ask for credential creation (first name)
-                response = `CON Enter your first name to create your credentials:`;
-              } else if (
-                !this.sessionStore[sessionId].credentialData.firstName
-              ) {
-                this.sessionStore[sessionId].credentialData.firstName =
-                  credentialStep;
-                response = `CON Enter your last name:`;
-              } else if (
-                !this.sessionStore[sessionId].credentialData.lastName
-              ) {
-                this.sessionStore[sessionId].credentialData.lastName =
+                response = `CON Enter your full name to create your credentials:`;
+              } else if (!this.sessionStore[sessionId].credentialData.name) {
+                this.sessionStore[sessionId].credentialData.name =
                   credentialStep;
 
                 // Step: Ask to confirm credential selection
@@ -179,6 +171,9 @@ export class UssdService {
                     selectedOffering.data.requiredClaims,
                   );
 
+                  // Store the verification in session for later use
+                  this.sessionStore[sessionId].verification = verification;
+
                   // Store the selected credentials for future steps
                   this.sessionStore[sessionId].credentialConfirmed = true;
 
@@ -190,6 +185,8 @@ export class UssdService {
                 }
               } else if (rfqConfirmation === '1') {
                 // Proceed with RFQ creation
+                // Retrieve the stored verification object from session
+                const verification = this.sessionStore[sessionId].verification;
                 const pfiDID =
                   this.sessionStore[sessionId].storedOfferings[offeringIndex]
                     .metadata.from;
@@ -199,7 +196,7 @@ export class UssdService {
                     pfiDID,
                     user.did,
                     selectedOffering,
-                    this.sessionStore[sessionId].credentialData,
+                    verification,
                     amount,
                   );
 
