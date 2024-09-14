@@ -50,6 +50,7 @@ jobs:
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           script: |
             source ~/.bashrc
+            node -v
             pwd
             cd /home/${{ secrets.DROPLET_USER }}/dev/fouroneone
             git pull
