@@ -218,7 +218,6 @@ export class UssdService {
                   this.sessionStore[sessionId].storedOfferings[
                     startIndex + offeringIndex
                   ].metadata.from;
-
                 try {
                   const rfqResult = await createRfq(
                     pfiDID,
@@ -228,7 +227,13 @@ export class UssdService {
                     amount,
                   );
                   this.sessionStore[sessionId].rfqResult = rfqResult;
+                } catch (error) {
+                  this.logger.error('Error creating RFQ: ', error);
+                  response =
+                    'END Error processing your request. Please try again later.';
+                }
 
+                try {
                   // Final step: process quote and end
                   const procesQuoteResult = await processQuote({
                     pfiDid: pfiDID,
@@ -240,10 +245,7 @@ export class UssdService {
 
                   response = `END Quote processed successfully. Thank you for using our service.`;
                 } catch (error) {
-                  this.logger.error(
-                    'Error creating RFQ or processing quote: ',
-                    error,
-                  );
+                  this.logger.error('Error processing quote: ', error);
                   response =
                     'END Error processing your request. Please try again later.';
                 }
