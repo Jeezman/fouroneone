@@ -24,6 +24,7 @@ export class UssdService {
       username: this.configService.get<string>('AFRICASTALKING_USERNAME'),
     });
   }
+
   async processUssd(
     text: string,
     sessionId: string,
@@ -60,10 +61,7 @@ export class UssdService {
     const credentialStep = parts[3];
     const credentialConfirmed = parts[4];
     const rfqConfirmation = parts[5];
-    const quoteConfirmation = parts[6];
-    console.log('rfq confirmation', rfqConfirmation);
-    console.log('quote confirmation', quoteConfirmation);
-    console.log('part confirmation', parts);
+    // const quoteConfirmation = parts[6];
 
     let user = await this.userRepository.findOne({ where: { phoneNumber } });
 
@@ -170,31 +168,27 @@ export class UssdService {
               // Ask the user to input the amount they wish to transfer
               if (!amount) {
                 response = `CON You selected: ${selectedOffering.data.description}. Enter the amount you wish to transfer:`;
-              }
-              if (!credentialStep) {
-                // Step: Ask for credential creation (first name)
+              } else if (!credentialStep) {
+                // Step: Ask for credential creation (full name)
                 response = `CON Enter your full name to create your credentials:`;
-              }
-              if (!this.sessionStore[sessionId].credentialData.name) {
+              } else if (!this.sessionStore[sessionId].credentialData.name) {
                 this.sessionStore[sessionId].credentialData.name =
                   credentialStep;
 
                 // Step: Ask to confirm credential selection
                 response = `CON Would you like to proceed with credential selection?\n1. Yes\n2. No`;
-              }
-              if (!credentialConfirmed) {
+              } else if (!credentialConfirmed) {
                 response = `CON Please confirm credential selection:\n1. Yes\n2. No`;
-              }
-              if (credentialConfirmed === '1') {
+              } else if (credentialConfirmed === '1') {
                 // Proceed with credential selection
-                const customerName = `${this.sessionStore[sessionId].credentialData.firstName} ${this.sessionStore[sessionId].credentialData.lastName}`;
+                const customerName =
+                  this.sessionStore[sessionId].credentialData.name;
                 const customerDID = user.did;
 
                 // Extract country code from phone number
                 const countryCode = phoneNumber.substring(0, 4);
 
                 try {
-                  // New step for credential selection with country code
                   const result = await requestVc({
                     name: customerName,
                     country: countryCode,
@@ -203,17 +197,12 @@ export class UssdService {
 
                   const { data } = result;
 
-                  // Separate credential selection step
                   const verification = await selectCredentials(
                     [data],
                     selectedOffering.data.requiredClaims,
                   );
 
-                  // Store the verification in session for later use
                   this.sessionStore[sessionId].verification = verification;
-
-                  // Store the selected credentials for future steps
-                  this.sessionStore[sessionId].credentialConfirmed = true;
 
                   // Step: Ask to create RFQ
                   response = `CON Credentials confirmed. Would you like to create an RFQ for ${amount} units?\n1. Yes\n2. No`;
@@ -222,8 +211,8 @@ export class UssdService {
                     'END Error selecting credentials. Please try again later.';
                 }
               }
+
               if (rfqConfirmation === '1') {
-                // Proceed with RFQ creation
                 const verification = this.sessionStore[sessionId].verification;
                 const pfiDID =
                   this.sessionStore[sessionId].storedOfferings[
@@ -238,46 +227,29 @@ export class UssdService {
                     verification,
                     amount,
                   );
-                  this.logger.log('RFQ Result: ', rfqResult);
-
-                  // Store the rfqResult in sessionStore
                   this.sessionStore[sessionId].rfqResult = rfqResult;
 
-                  // Transition to quote confirmation
-                  response = `CON Your Tx for ${amount} units - Created Successfully. \nWould you like to proceed with the quote?\n1. Proceed\n2. Cancel`;
-                } catch (error) {
-                  this.logger.error('Error creating RFQ: ', error);
-                  response = 'END Error creating RFQ. Please try again later.';
-                  return response;
-                }
-              }
-              if (quoteConfirmation === '1') {
-                // Proceed with quote processing
-                const pfiDID =
-                  this.sessionStore[sessionId].storedOfferings[
-                    startIndex + offeringIndex
-                  ].metadata.from;
-                const customerDid = this.sessionStore[sessionId].customerDID;
-
-                try {
+                  // Final step: process quote and end
                   const procesQuoteResult = await processQuote({
                     pfiDid: pfiDID,
-                    customerDid: customerDid,
+                    customerDid: user.did,
                     exchangeId:
                       this.sessionStore[sessionId].rfqResult.data.exchangeId,
                   });
-                  this.logger.log('Place Order Result: ', procesQuoteResult);
+                  this.logger.log('Process Quote Result: ', procesQuoteResult);
 
-                  response = `END Transaction completed successfully. Thank you for using our service.`;
+                  response = `END Quote processed successfully. Thank you for using our service.`;
                 } catch (error) {
-                  this.logger.error('Error placing order: ', error);
-                  response = 'END Error placing order. Please try again later.';
+                  this.logger.error(
+                    'Error creating RFQ or processing quote: ',
+                    error,
+                  );
+                  response =
+                    'END Error processing your request. Please try again later.';
                 }
-              } else if (quoteConfirmation === '2') {
-                response = `END Transaction has been cancelled.`;
+              } else if (rfqConfirmation === '2') {
+                response = `END RFQ creation has been cancelled. Thank you for using our service.`;
               }
-            } else {
-              response = `END Invalid choice. Please try again.`;
             }
           }
         } catch (error) {
@@ -287,7 +259,7 @@ export class UssdService {
         break;
 
       default:
-        response = 'END Invalid selection. Please try again.';
+        response = 'END Invalid option. Please try again.';
         break;
     }
 

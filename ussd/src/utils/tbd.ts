@@ -141,7 +141,7 @@ export const createRfq = async (
     });
     logger.log(`FINALIZING TX SUCCESS `, { transactionStatus });
 
-    return { rfq, transactionStatus };
+    return { rfq };
   } catch (error) {
     console.error('Error creating RFQ or processing exchange: ', error.message);
   }
