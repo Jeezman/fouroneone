@@ -188,7 +188,7 @@ export const placeOrder = async ({
 export const processQuote = async ({ pfiDid, customerDid, exchangeId }) => {
   const logger = new Logger('PROCESSQUOTE');
   const client = await getTbdexHttpClient();
-
+  const importCustomerDid = await DidDht.import({ portableDid: customerDid });
   let attempts = 0;
   const maxAttempts = 30;
   const delay = 500;
@@ -208,7 +208,7 @@ export const processQuote = async ({ pfiDid, customerDid, exchangeId }) => {
       });
       const exchange = await client.TbdexHttpClient.getExchange({
         pfiDid: pfiDid,
-        did: customerDid,
+        did: importCustomerDid,
         exchangeId: exchangeId,
       });
 
