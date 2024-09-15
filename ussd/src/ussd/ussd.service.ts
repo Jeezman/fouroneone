@@ -235,6 +235,10 @@ export class UssdService {
 
                 try {
                   // Final step: process quote and end
+                  this.logger.log(
+                    'Excgange ID sesiong',
+                    this.sessionStore[sessionId],
+                  );
                   const procesQuoteResult = await createQuote(
                     pfiDID,
                     user.did,
