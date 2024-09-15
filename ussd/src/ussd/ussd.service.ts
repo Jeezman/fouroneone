@@ -131,14 +131,38 @@ export class UssdService {
             }
           } else {
             const offeringIndex = parseInt(offeringOption) - 1;
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = Math.min(
+              startIndex + itemsPerPage,
+              offerings.length,
+            );
 
             if (
-              offeringIndex >= 0 &&
-              offeringIndex <
-                this.sessionStore[sessionId].storedOfferings.length
+              offeringOption === `${endIndex + 1}` &&
+              currentPage < totalPages
             ) {
+              // User selected "Next" for pagination
+              this.sessionStore[sessionId].currentPage += 1;
+              response = await this.processUssd(
+                `*${mainOption}`,
+                sessionId,
+                phoneNumber,
+                networkCode,
+              );
+            } else if (offeringOption === '0' && currentPage > 1) {
+              // User selected "Previous" for pagination
+              this.sessionStore[sessionId].currentPage -= 1;
+              response = await this.processUssd(
+                `*${mainOption}`,
+                sessionId,
+                phoneNumber,
+                networkCode,
+              );
+            } else if (offeringIndex >= 0 && offeringIndex < offerings.length) {
               const selectedOffering =
-                this.sessionStore[sessionId].storedOfferings[offeringIndex];
+                this.sessionStore[sessionId].storedOfferings[
+                  startIndex + offeringIndex
+                ];
 
               // Ask the user to input the amount they wish to transfer
               if (!amount) {
@@ -195,8 +219,9 @@ export class UssdService {
                 // Proceed with RFQ creation
                 const verification = this.sessionStore[sessionId].verification;
                 const pfiDID =
-                  this.sessionStore[sessionId].storedOfferings[offeringIndex]
-                    .metadata.from;
+                  this.sessionStore[sessionId].storedOfferings[
+                    startIndex + offeringIndex
+                  ].metadata.from;
 
                 try {
                   const rfqResult = await createRfq(
@@ -224,10 +249,9 @@ export class UssdService {
               } else if (quoteConfirmation === '1') {
                 // Proceed with quote processing
                 const pfiDID =
-                  this.sessionStore[sessionId].storedOfferings[offeringIndex]
-                    .metadata.from;
-                const selectedOffering =
-                  this.sessionStore[sessionId].storedOfferings[offeringIndex];
+                  this.sessionStore[sessionId].storedOfferings[
+                    startIndex + offeringIndex
+                  ].metadata.from;
                 const customerDid = this.sessionStore[sessionId].customerDID;
 
                 try {
@@ -237,37 +261,29 @@ export class UssdService {
                     this.sessionStore[sessionId].rfqResult.data.exchangeId,
                     selectedOffering,
                   );
+                  this.logger.log('Place Order Result: ', placeOrderResult);
 
-                  this.logger.log('Place order result: ', placeOrderResult);
-                  response = `END Quote processing complete. Thank you for using our service.`;
-                  return response;
+                  response = `END Transaction completed successfully. Thank you for using our service.`;
                 } catch (error) {
-                  this.logger.error('Error processing quote: ', error);
-                  response =
-                    'END Error processing quote. Please try again later.';
-                  return response;
+                  this.logger.error('Error placing order: ', error);
+                  response = 'END Error placing order. Please try again later.';
                 }
               } else if (quoteConfirmation === '2') {
-                response = `END Quote processing cancelled. Thank you for using our service.`;
-              } else {
-                response = `END Invalid choice. Please try again.`;
+                response = `END Transaction has been cancelled.`;
               }
             } else {
-              response = 'END Invalid offering selection. Please try again.';
+              response = `END Invalid choice. Please try again.`;
             }
           }
         } catch (error) {
+          this.logger.error('Error fetching offerings: ', error);
           response = 'END Error fetching offerings. Please try again later.';
         }
         break;
 
       default:
-        response = 'END Invalid option selected. Please try again.';
+        response = 'END Invalid selection. Please try again.';
         break;
-    }
-
-    if (!response.startsWith('CON') && !response.startsWith('END')) {
-      response = 'END Invalid response format.';
     }
 
     return response;
