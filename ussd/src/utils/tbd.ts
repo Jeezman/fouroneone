@@ -147,12 +147,12 @@ export const createRfq = async (
   }
 };
 
-export const placeOrder = async (
+export const placeOrder = async ({
   customerDid,
   pfiDid,
   exchangeId,
   selectedOffering,
-) => {
+}) => {
   const logger = new Logger('CREATERORDER');
   const client = await getTbdexHttpClient();
   const importCustomerDid = await DidDht.import({ portableDid: customerDid });

@@ -5,7 +5,12 @@ import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { User } from 'src/user/entities/user.entity';
 import { UserService } from 'src/user/user.service';
-import { fetchOfferings, createRfq, placeOrder } from 'src/utils/tbd';
+import {
+  fetchOfferings,
+  createRfq,
+  placeOrder,
+  processQuote,
+} from 'src/utils/tbd';
 import { requestVc, selectCredentials } from 'src/utils/vc';
 
 @Injectable()
@@ -255,13 +260,13 @@ export class UssdService {
                 const customerDid = this.sessionStore[sessionId].customerDID;
 
                 try {
-                  const placeOrderResult = await placeOrder(
-                    customerDid,
-                    pfiDID,
-                    this.sessionStore[sessionId].rfqResult.data.exchangeId,
-                    selectedOffering,
-                  );
-                  this.logger.log('Place Order Result: ', placeOrderResult);
+                  const procesQuoteResult = await processQuote({
+                    pfiDid: pfiDID,
+                    customerDid: customerDid,
+                    exchangeId:
+                      this.sessionStore[sessionId].rfqResult.data.exchangeId,
+                  });
+                  this.logger.log('Place Order Result: ', procesQuoteResult);
 
                   response = `END Transaction completed successfully. Thank you for using our service.`;
                 } catch (error) {
