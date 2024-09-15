@@ -61,6 +61,9 @@ export class UssdService {
     const credentialConfirmed = parts[4];
     const rfqConfirmation = parts[5];
     const quoteConfirmation = parts[6];
+    console.log('rfq confirmation', rfqConfirmation);
+    console.log('quote confirmation', quoteConfirmation);
+    console.log('part confirmation', parts);
 
     let user = await this.userRepository.findOne({ where: { phoneNumber } });
 
