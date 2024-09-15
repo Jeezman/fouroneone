@@ -45,7 +45,7 @@ jobs:
             echo ${{ secrets.LAST_PASS }} | sudo -S apt install -y nodejs
             echo ${{ secrets.LAST_PASS }} | sudo -S apt install -y npm
             node -v
-            npm install -g pm2
+            echo ${{ secrets.LAST_PASS }} | sudo -S npm install -g pm2
             pwd
             cd /home/${{ secrets.DROPLET_USER }}/dev/fouroneone
             git pull
