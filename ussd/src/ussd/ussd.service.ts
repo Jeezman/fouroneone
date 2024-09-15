@@ -257,10 +257,6 @@ export class UssdService {
                 response = `END RFQ creation has been cancelled. Thank you for using our service.`;
               } else if (quoteConfirmation === '1') {
                 // Proceed with quote processing
-                // const rfqResult = this.sessionStore[sessionId].rfqResult;
-                this.logger.log(
-                  'Order creation started wiw v bjbjjkrrkeerjrrke',
-                );
                 const pfiDID =
                   this.sessionStore[sessionId].storedOfferings[
                     startIndex + offeringIndex
