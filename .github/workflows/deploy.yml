@@ -50,8 +50,8 @@ jobs:
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           script: |
             source ~/.bashrc
-            echo ${{ secrets.LAST_PASS }} | sudo -S apt install nodejs
-             echo ${{ secrets.LAST_PASS }} | sudo -S apt install npm
+            echo ${{ secrets.LAST_PASS }} | sudo -S apt install -y nodejs
+             echo ${{ secrets.LAST_PASS }} | sudo -S apt install -y npm
             node -v
             pwd
             cd /home/${{ secrets.DROPLET_USER }}/dev/fouroneone
