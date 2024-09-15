@@ -5,7 +5,7 @@ import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { User } from 'src/user/entities/user.entity';
 import { UserService } from 'src/user/user.service';
-import { fetchOfferings, createRfq, processQuote } from 'src/utils/tbd';
+import { fetchOfferings, createRfq, createQuote } from 'src/utils/tbd';
 import { requestVc, selectCredentials } from 'src/utils/vc';
 
 @Injectable()
@@ -235,12 +235,12 @@ export class UssdService {
 
                 try {
                   // Final step: process quote and end
-                  const procesQuoteResult = await processQuote({
-                    pfiDid: pfiDID,
-                    customerDid: user.did,
-                    exchangeId:
-                      this.sessionStore[sessionId].rfqResult.data.exchangeId,
-                  });
+                  const procesQuoteResult = await createQuote(
+                    pfiDID,
+                    user.did,
+                    this.sessionStore[sessionId].rfqResult.data.exchangeId,
+                    selectedOffering,
+                  );
                   this.logger.log('Process Quote Result: ', procesQuoteResult);
 
                   response = `END Quote processed successfully. Thank you for using our service.`;

@@ -108,39 +108,38 @@ export const createRfq = async (
       `PROCESS Quote check pfiDid: ${pfiDid} metadataFrom: ${selectedOffering.metadata.from}`,
     );
 
-    const exchange = await processQuote({
-      exchangeId: rfq.exchangeId,
-      pfiDid: pfiDid,
-      customerDid: importCustomerDid,
-    });
+    // const exchange = await processQuote({
+    //   exchangeId: rfq.exchangeId,
+    //   pfiDid: pfiDid,
+    //   customerDid: importCustomerDid,
+    // });
 
-    logger.log(
-      `Exchange created successfully ${JSON.stringify(exchange, null, 2)}`,
-    );
+    // logger.log(
+    //   `Exchange created successfully ${JSON.stringify(exchange, null, 2)}`,
+    // );
 
-    const order = await placeOrder({
-      customerDid: importCustomerDid,
-      pfiDid: pfiDid,
-      exchangeId: exchange.exchangeId,
-      selectedOffering,
-    });
+    // const order = await placeOrder({
+    //   customerDid: importCustomerDid,
+    //   pfiDid: pfiDid,
+    //   exchangeId: exchange.exchangeId,
+    //   selectedOffering,
+    // });
 
-    logger.log(`SIGN ORDER`);
-    await order.sign(importCustomerDid);
-    logger.log(`SIGN ORDER SUCCESS`);
+    // logger.log(`SIGN ORDER`);
+    // await order.sign(importCustomerDid);
+    // logger.log(`SIGN ORDER SUCCESS`);
 
-    logger.log(`SUBMIT ORDER`);
-    await client.TbdexHttpClient.submitOrder(order);
-    logger.log(`SUBMIT ORDER SUCCESS`);
+    // logger.log(`SUBMIT ORDER`);
+    // await client.TbdexHttpClient.submitOrder(order);
+    // logger.log(`SUBMIT ORDER SUCCESS`);
 
-    logger.log(`FINALIZING TX`);
-    const transactionStatus = await finalizeTransaction({
-      exchangeId: rfq.exchangeId,
-      pfiDid: pfiDid,
-      customerDid: importCustomerDid,
-    });
-    logger.log(`FINALIZING TX SUCCESS `, { transactionStatus });
-
+    // logger.log(`FINALIZING TX`);
+    // const transactionStatus = await finalizeTransaction({
+    //   exchangeId: rfq.exchangeId,
+    //   pfiDid: pfiDid,
+    //   customerDid: importCustomerDid,
+    // });
+    // logger.log(`FINALIZING TX SUCCESS `, { transactionStatus });
     return { rfq };
   } catch (error) {
     console.error('Error creating RFQ or processing exchange: ', error.message);
@@ -293,4 +292,44 @@ export const finalizeTransaction = async ({
   const closeSuccess = close.data.success;
 
   return { reasonForClose, closeSuccess };
+};
+
+export const createQuote = async (
+  pfiDid,
+  customerDid,
+  rfq,
+  selectedOffering,
+) => {
+  const logger = new Logger('CREATEQUOTE');
+  const importCustomerDid = await DidDht.import({ portableDid: customerDid });
+  const client = await getTbdexHttpClient();
+  const exchange = await processQuote({
+    exchangeId: rfq.exchangeId,
+    pfiDid: pfiDid,
+    customerDid: importCustomerDid,
+  });
+
+  logger.log(`Process Quote Successfully ${JSON.stringify(exchange, null, 2)}`);
+  const order = await placeOrder({
+    customerDid: importCustomerDid,
+    pfiDid: pfiDid,
+    exchangeId: exchange.exchangeId,
+    selectedOffering,
+  });
+
+  logger.log(`SIGN ORDER`);
+  await order.sign(importCustomerDid);
+  logger.log(`SIGN ORDER SUCCESS`);
+
+  logger.log(`SUBMIT ORDER`);
+  await client.TbdexHttpClient.submitOrder(order);
+  logger.log(`SUBMIT ORDER SUCCESS`);
+
+  logger.log(`FINALIZING TX`);
+  const transactionStatus = await finalizeTransaction({
+    exchangeId: rfq.exchangeId,
+    pfiDid: pfiDid,
+    customerDid: importCustomerDid,
+  });
+  logger.log(`FINALIZING TX SUCCESS `, { transactionStatus });
 };
