@@ -74,4 +74,4 @@ jobs:
                 ]
             }
             EOL
-            pm2 config.json --env production
+            pm2 start config.json --env production
