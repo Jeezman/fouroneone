@@ -242,7 +242,7 @@ export class UssdService {
                   const procesQuoteResult = await createQuote(
                     pfiDID,
                     user.did,
-                    this.sessionStore[sessionId].rfqResult,
+                    this.sessionStore[sessionId].rfqResult.rfq,
                     selectedOffering,
                   );
                   this.logger.log('Process Quote Result: ', procesQuoteResult);
