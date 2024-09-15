@@ -273,7 +273,7 @@ export class UssdService {
                   this.logger.log('Process Quote Result: ', procesQuoteResult);
 
                   // Transition to order placement
-                  response = `CON Quote processed successfully. Would you like to place an order for the quote?\n1. Proceed with order\n2. Cancel`;
+                  response = `END Quote processed successfully.`;
                 } catch (error) {
                   this.logger.error('Error processing quote: ', error);
                   response =
