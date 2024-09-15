@@ -304,7 +304,7 @@ export const createQuote = async (
   const importCustomerDid = await DidDht.import({ portableDid: customerDid });
   const client = await getTbdexHttpClient();
   const exchange = await processQuote({
-    exchangeId: rfq.exchangeId,
+    exchangeId: rfq.metadata.exchangeId,
     pfiDid: pfiDid,
     customerDid: importCustomerDid,
   });
@@ -327,7 +327,7 @@ export const createQuote = async (
 
   logger.log(`FINALIZING TX`);
   const transactionStatus = await finalizeTransaction({
-    exchangeId: rfq.exchangeId,
+    exchangeId: rfq.metadata.exchangeId,
     pfiDid: pfiDid,
     customerDid: importCustomerDid,
   });
