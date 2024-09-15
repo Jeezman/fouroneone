@@ -1,0 +1,53 @@
+name: CI/CD Pipeline
+
+on: 
+  push:
+    branches: [ "master", "new-flow" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build packages and services
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 🛎
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 🏗
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+  
+      - name: Install Node Modules 🔧
+        run: |
+          npm install
+          npm run build --if-present
+        working-directory: ./ussd
+  
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with: 
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+  
+      - name: 'SSH and Deploy'
+        uses: appleboy/ssh-action@master
+        with:
+            host: ${{ secrets.DROPLET_IP }}
+            username: ${{ secrets.DROPLET_USER }}
+            key: ${{ secrets.SSH_PRIVATE_KEY }}
+            passphrase: ${{ secrets.SSH_PASSPHRASE }}
+            script: |
+              pwd
+              echo $HOME
+              cd /home/${{ secrets.DROPLET_USER }}/dev/fouroneone
+              pwd
+              # git pull
+              git checkout new-flow
+              cd /home/${{ secrets.DROPLET_USER }}/dev/fouroneone/ussd
+              # npm run build
+              # pm2 restart ussd
