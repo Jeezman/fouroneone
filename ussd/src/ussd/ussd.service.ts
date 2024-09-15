@@ -248,7 +248,6 @@ export class UssdService {
 
                   // Transition to quote confirmation
                   response = `CON Your Tx for ${amount} units - Created Successfully. \nWould you like to proceed with the quote?\n1. Proceed\n2. Cancel`;
-                  return response; // Ensure the response is returned to the user
                 } catch (error) {
                   this.logger.error('Error creating RFQ: ', error);
                   response = 'END Error creating RFQ. Please try again later.';
