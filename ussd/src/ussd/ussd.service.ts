@@ -5,13 +5,7 @@ import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { User } from 'src/user/entities/user.entity';
 import { UserService } from 'src/user/user.service';
-import {
-  fetchOfferings,
-  createRfq,
-  placeOrder,
-  processQuote,
-  finalizeTransaction,
-} from 'src/utils/tbd';
+import { fetchOfferings, createRfq, processQuote } from 'src/utils/tbd';
 import { requestVc, selectCredentials } from 'src/utils/vc';
 
 @Injectable()
@@ -30,7 +24,6 @@ export class UssdService {
       username: this.configService.get<string>('AFRICASTALKING_USERNAME'),
     });
   }
-
   async processUssd(
     text: string,
     sessionId: string,
@@ -68,8 +61,6 @@ export class UssdService {
     const credentialConfirmed = parts[4];
     const rfqConfirmation = parts[5];
     const quoteConfirmation = parts[6];
-    const orderConfirmation = parts[7]; // New step for order confirmation
-    const transactionConfirmation = parts[8]; // New step for transaction confirmation
 
     let user = await this.userRepository.findOne({ where: { phoneNumber } });
 
@@ -224,7 +215,6 @@ export class UssdService {
                     'END Error selecting credentials. Please try again later.';
                 }
               }
-
               if (rfqConfirmation === '1') {
                 // Proceed with RFQ creation
                 const verification = this.sessionStore[sessionId].verification;
@@ -248,6 +238,7 @@ export class UssdService {
 
                   // Transition to quote confirmation
                   response = `CON Your Tx for ${amount} units - Created Successfully. \nWould you like to proceed with the quote?\n1. Proceed\n2. Cancel`;
+                  return response; // Ensure the response is returned to the user
                 } catch (error) {
                   this.logger.error('Error creating RFQ: ', error);
                   response = 'END Error creating RFQ. Please try again later.';
@@ -270,72 +261,18 @@ export class UssdService {
                     exchangeId:
                       this.sessionStore[sessionId].rfqResult.data.exchangeId,
                   });
-                  this.logger.log('Process Quote Result: ', procesQuoteResult);
+                  this.logger.log('Place Order Result: ', procesQuoteResult);
 
-                  // Transition to order placement
-                  response = `END Quote processed successfully.`;
-                } catch (error) {
-                  this.logger.error('Error processing quote: ', error);
-                  response =
-                    'END Error processing quote. Please try again later.';
-                }
-              } else if (quoteConfirmation === '2') {
-                response = `END Quote processing has been cancelled. Thank you for using our service.`;
-              } else if (orderConfirmation === '1') {
-                // Proceed with order placement
-                // const rfqResult = this.sessionStore[sessionId].rfqResult;
-                const customerDid = this.sessionStore[sessionId].customerDID;
-                const pfiDID =
-                  this.sessionStore[sessionId].storedOfferings[
-                    startIndex + offeringIndex
-                  ].metadata.from;
-                const selectedOffering =
-                  this.sessionStore[sessionId].storedOfferings[
-                    startIndex + offeringIndex
-                  ];
-                try {
-                  const orderResult = await placeOrder({
-                    customerDid: customerDid,
-                    pfiDid: pfiDID,
-                    exchangeId:
-                      this.sessionStore[sessionId].rfqResult.data.exchangeId,
-                    selectedOffering: selectedOffering,
-                  });
-                  this.logger.log('Order Placed Result: ', orderResult);
-                  // Transition to transaction creation
-                  response = `CON Order placed successfully. Would you like to create a transaction?\n1. Proceed with transaction\n2. Cancel`;
+                  response = `END Transaction completed successfully. Thank you for using our service.`;
                 } catch (error) {
                   this.logger.error('Error placing order: ', error);
                   response = 'END Error placing order. Please try again later.';
                 }
-              } else if (orderConfirmation === '2') {
-                response = `END Order placement has been cancelled. Thank you for using our service.`;
-              } else if (transactionConfirmation === '1') {
-                // Proceed with transaction creation
-                // const rfqResult = this.sessionStore[sessionId].rfqResult;
-                const pfiDID =
-                  this.sessionStore[sessionId].storedOfferings[
-                    startIndex + offeringIndex
-                  ].metadata.from;
-                const customerDid = this.sessionStore[sessionId].customerDID;
-
-                try {
-                  const transactionResult = await finalizeTransaction({
-                    pfiDid: pfiDID,
-                    customerDid: customerDid,
-                    exchangeId:
-                      this.sessionStore[sessionId].rfqResult.data.exchangeId,
-                  });
-                  this.logger.log('Transaction Result: ', transactionResult);
-                  response = `END Transaction created successfully. Thank you for using our service.`;
-                } catch (error) {
-                  this.logger.error('Error creating transaction: ', error);
-                  response =
-                    'END Error creating transaction. Please try again later.';
-                }
-              } else if (transactionConfirmation === '2') {
-                response = `END Transaction creation has been cancelled. Thank you for using our service.`;
+              } else if (quoteConfirmation === '2') {
+                response = `END Transaction has been cancelled.`;
               }
+            } else {
+              response = `END Invalid choice. Please try again.`;
             }
           }
         } catch (error) {
@@ -345,7 +282,8 @@ export class UssdService {
         break;
 
       default:
-        response = 'END Invalid option. Please try again.';
+        response = 'END Invalid selection. Please try again.';
+        break;
     }
 
     return response;
