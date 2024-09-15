@@ -303,6 +303,7 @@ export const createQuote = async (
   const logger = new Logger('CREATEQUOTE');
   const importCustomerDid = await DidDht.import({ portableDid: customerDid });
   const client = await getTbdexHttpClient();
+  logger.log('start creation of Quote');
   const exchange = await processQuote({
     exchangeId: rfq.metadata.exchangeId,
     pfiDid: pfiDid,
