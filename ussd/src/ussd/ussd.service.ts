@@ -258,6 +258,9 @@ export class UssdService {
               } else if (quoteConfirmation === '1') {
                 // Proceed with quote processing
                 // const rfqResult = this.sessionStore[sessionId].rfqResult;
+                this.logger.log(
+                  'Order creation started wiw v bjbjjkrrkeerjrrke',
+                );
                 const pfiDID =
                   this.sessionStore[sessionId].storedOfferings[
                     startIndex + offeringIndex
