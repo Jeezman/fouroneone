@@ -154,7 +154,7 @@ export const placeOrder = async ({
 }) => {
   const logger = new Logger('CREATERORDER');
   const client = await getTbdexHttpClient();
-  const importCustomerDid = await DidDht.import({ portableDid: customerDid });
+  // const importCustomerDid = await DidDht.import({ portableDid: customerDid });
 
   logger.log(`Create order with `, {
     from: customerDid.uri,
@@ -174,13 +174,13 @@ export const placeOrder = async ({
 
   logger.log(`Create order success`, { order });
 
-  logger.log(`SIGN ORDER`);
-  await order.sign(importCustomerDid);
-  logger.log(`SIGN ORDER SUCCESS`);
+  // logger.log(`SIGN ORDER`);
+  // await order.sign(importCustomerDid);
+  // logger.log(`SIGN ORDER SUCCESS`);
 
-  logger.log(`SUBMIT ORDER`);
-  await client.TbdexHttpClient.submitOrder(order);
-  logger.log(`SUBMIT ORDER SUCCESS`);
+  // logger.log(`SUBMIT ORDER`);
+  // await client.TbdexHttpClient.submitOrder(order);
+  // logger.log(`SUBMIT ORDER SUCCESS`);
   return order;
 };
 
