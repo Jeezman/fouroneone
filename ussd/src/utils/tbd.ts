@@ -307,12 +307,12 @@ export const createQuote = async (
   const exchange = await processQuote({
     exchangeId: rfq.metadata.exchangeId,
     pfiDid: pfiDid,
-    customerDid: importCustomerDid,
+    customerDid: customerDid,
   });
 
   logger.log(`Process Quote Successfully ${JSON.stringify(exchange, null, 2)}`);
   const order = await placeOrder({
-    customerDid: importCustomerDid,
+    customerDid: customerDid,
     pfiDid: pfiDid,
     exchangeId: exchange.exchangeId,
     selectedOffering,
