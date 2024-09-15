@@ -33,14 +33,6 @@ jobs:
       #   uses: digitalocean/action-doctl@v2
       #   with: 
       #     token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          
-      - name: Install PM2
-        run: npm install -g pm2
-  
       - name: 'SSH and Deploy'
         uses: appleboy/ssh-action@master
         with:
@@ -51,8 +43,9 @@ jobs:
           script: |
             source ~/.bashrc
             echo ${{ secrets.LAST_PASS }} | sudo -S apt install -y nodejs
-             echo ${{ secrets.LAST_PASS }} | sudo -S apt install -y npm
+            echo ${{ secrets.LAST_PASS }} | sudo -S apt install -y npm
             node -v
+            npm install -g pm2
             pwd
             cd /home/${{ secrets.DROPLET_USER }}/dev/fouroneone
             git pull
