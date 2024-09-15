@@ -5,7 +5,7 @@ import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { User } from 'src/user/entities/user.entity';
 import { UserService } from 'src/user/user.service';
-import { fetchOfferings, createRfq } from 'src/utils/tbd';
+import { fetchOfferings, createRfq, createQuote } from 'src/utils/tbd';
 import { requestVc, selectCredentials } from 'src/utils/vc';
 
 @Injectable()
@@ -40,26 +40,32 @@ export class UssdService {
 
     let response = '';
 
-    // Ensure session store has an entry for the sessionId
     if (!this.sessionStore[sessionId]) {
       this.sessionStore[sessionId] = {
         providerUri: null,
         storedOfferings: [],
-        currentPage: 1, // Track current page of offerings
+        currentPage: 1,
+        credentialData: {},
+        credentialConfirmed: false,
+        rfqConfirmation: null, // Field to track RFQ confirmation
+        quoteConfirmation: null,
+        customerDID: null,
+        rfqResult: null,
       };
-      // this.logger.log('Set session store entry: ', this.sessionStore);
     }
 
     const parts = text.split('*');
-    const mainOption = parts[0]; // Main menu option
-    const offeringOption = parts[1]; // Selected offering or next/previous
+    const mainOption = parts[0];
+    const offeringOption = parts[1];
+    const amount = parts[2];
+    const credentialStep = parts[3];
+    const credentialConfirmed = parts[4];
+    const rfqConfirmation = parts[5];
+    // const quoteConfirmation = parts[6];
 
     let user = await this.userRepository.findOne({ where: { phoneNumber } });
-    // this.logger.log(`Get user: ${JSON.stringify(user, null, 2)}`);
 
-    // If user doesn't exist, create one
     if (!user) {
-      // this.logger.log('User does not exist. Create user...');
       try {
         user = await this.userService.create({
           phoneNumber,
@@ -71,6 +77,9 @@ export class UssdService {
       }
     }
 
+    // Store customerDID in sessionStore for the entire session
+    this.sessionStore[sessionId].customerDID = user.did;
+
     switch (mainOption) {
       case '':
         // Main menu options
@@ -81,7 +90,6 @@ export class UssdService {
       case '2':
       case '3':
       case '4':
-        // Fetch offerings based on provider selection
         const providerIndex = parseInt(mainOption) - 1;
         const providerNames = [
           'AquaFinance Capital',
@@ -119,46 +127,74 @@ export class UssdService {
                 response += `${endIndex + 1}. Next \n`;
               }
               if (currentPage > 1) {
-                response += `0. Previous \n`; // Always display Previous as 0
+                response += `0. Previous \n`;
               }
             }
           } else {
-            // Offering selection
             const offeringIndex = parseInt(offeringOption) - 1;
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = Math.min(
+              startIndex + itemsPerPage,
+              offerings.length,
+            );
 
             if (
-              offeringIndex >= 0 &&
-              offeringIndex <
-                this.sessionStore[sessionId].storedOfferings.length
+              offeringOption === `${endIndex + 1}` &&
+              currentPage < totalPages
             ) {
+              // User selected "Next" for pagination
+              this.sessionStore[sessionId].currentPage += 1;
+              response = await this.processUssd(
+                `*${mainOption}`,
+                sessionId,
+                phoneNumber,
+                networkCode,
+              );
+            } else if (offeringOption === '0' && currentPage > 1) {
+              // User selected "Previous" for pagination
+              this.sessionStore[sessionId].currentPage -= 1;
+              response = await this.processUssd(
+                `*${mainOption}`,
+                sessionId,
+                phoneNumber,
+                networkCode,
+              );
+            } else if (offeringIndex >= 0 && offeringIndex < offerings.length) {
               const selectedOffering =
-                this.sessionStore[sessionId].storedOfferings[offeringIndex];
+                this.sessionStore[sessionId].storedOfferings[
+                  startIndex + offeringIndex
+                ];
 
               // Ask the user to input the amount they wish to transfer
-              if (!parts[2]) {
+              if (!amount) {
                 response = `CON You selected: ${selectedOffering.data.description}. Enter the amount you wish to transfer:`;
-              } else {
-                const amount = parseFloat(parts[2]).toString(); // User input amount
+              } else if (!credentialStep) {
+                // Step: Ask for credential creation (full name)
+                response = `CON Enter your full name to create your credentials:`;
+              } else if (!this.sessionStore[sessionId].credentialData.name) {
+                this.sessionStore[sessionId].credentialData.name =
+                  credentialStep;
 
-                // Extract name from phone number (using phone number as the name)
-                const customerName = phoneNumber;
-                // Extract country code from phone number (assuming E.164 format like +234XXXXXXXXX)
-                const countryCode = phoneNumber.substring(0, 4); // Adjust this according to the actual phone format
-                // Fetch customer DID from user entity
+                // Step: Ask to confirm credential selection
+                response = `CON Would you like to proceed with credential selection?\n1. Yes\n2. No`;
+              } else if (!credentialConfirmed) {
+                response = `CON Please confirm credential selection:\n1. Yes\n2. No`;
+              } else if (credentialConfirmed === '1') {
+                // Proceed with credential selection
+                const customerName =
+                  this.sessionStore[sessionId].credentialData.name;
                 const customerDID = user.did;
-                const pfiDID =
-                  this.sessionStore[sessionId].storedOfferings[offeringIndex]
-                    .metadata.from;
-                console.log('customer did', customerDID);
-                console.log('customer name ', customerName);
-                console.log('country code ', countryCode);
+
+                // Extract country code from phone number
+                const countryCode = phoneNumber.substring(0, 4);
+
                 try {
                   const result = await requestVc({
                     name: customerName,
-                    country: countryCode, // TODO: Use the actual country code
+                    country: countryCode,
                     did: customerDID.uri,
                   });
-                  // Display the result to the user
+
                   const { data } = result;
 
                   const verification = await selectCredentials(
@@ -166,37 +202,71 @@ export class UssdService {
                     selectedOffering.data.requiredClaims,
                   );
 
-                  // Call createRfq with the required parameters including the amount
-                  const rfqResult = await createRfq(
-                    pfiDID,
-                    customerDID,
-                    selectedOffering,
-                    verification,
-                    amount, // Pass the input amount here
-                  );
+                  this.sessionStore[sessionId].verification = verification;
 
-                  response = `END Your Tx for ${amount} units - Status: ${rfqResult.transactionStatus.reasonForClose}. \nThank you for using our service.`;
+                  // Step: Ask to create RFQ
+                  response = `CON Credentials confirmed. Would you like to create an RFQ for ${amount} units?\n1. Yes\n2. No`;
                 } catch (error) {
                   response =
-                    'END Error fetching verification or creating RFQ. Please try again later.';
+                    'END Error selecting credentials. Please try again later.';
                 }
               }
-            } else {
-              response = 'END Invalid offering selection. Please try again.';
+
+              if (rfqConfirmation === '1') {
+                const verification = this.sessionStore[sessionId].verification;
+                const pfiDID =
+                  this.sessionStore[sessionId].storedOfferings[
+                    startIndex + offeringIndex
+                  ].metadata.from;
+                try {
+                  const rfqResult = await createRfq(
+                    pfiDID,
+                    user.did,
+                    selectedOffering,
+                    verification,
+                    amount,
+                  );
+                  this.sessionStore[sessionId].rfqResult = rfqResult;
+                } catch (error) {
+                  this.logger.error('Error creating RFQ: ', error);
+                  response =
+                    'END Error processing your request. Please try again later.';
+                }
+
+                try {
+                  // Final step: process quote and end
+                  this.logger.log(
+                    'Excgange ID sesiong',
+                    this.sessionStore[sessionId],
+                  );
+                  const procesQuoteResult = await createQuote(
+                    pfiDID,
+                    user.did,
+                    this.sessionStore[sessionId].rfqResult.rfq,
+                    selectedOffering,
+                  );
+                  this.logger.log('Process Quote Result: ', procesQuoteResult);
+
+                  response = `END Quote processed successfully. Thank you for using our service.`;
+                } catch (error) {
+                  this.logger.error('Error processing quote: ', error);
+                  response =
+                    'END Error processing your request. Please try again later.';
+                }
+              } else if (rfqConfirmation === '2') {
+                response = `END RFQ creation has been cancelled. Thank you for using our service.`;
+              }
             }
           }
         } catch (error) {
+          this.logger.error('Error fetching offerings: ', error);
           response = 'END Error fetching offerings. Please try again later.';
         }
         break;
 
       default:
-        response = 'END Invalid option selected. Please try again.';
+        response = 'END Invalid option. Please try again.';
         break;
-    }
-
-    if (!response.startsWith('CON') && !response.startsWith('END')) {
-      response = 'END Invalid response format.';
     }
 
     return response;
