@@ -170,16 +170,19 @@ export class UssdService {
               // Ask the user to input the amount they wish to transfer
               if (!amount) {
                 response = `CON You selected: ${selectedOffering.data.description}. Enter the amount you wish to transfer:`;
-              } else if (!credentialStep) {
+              }
+              if (!credentialStep) {
                 // Step: Ask for credential creation (first name)
                 response = `CON Enter your full name to create your credentials:`;
-              } else if (!this.sessionStore[sessionId].credentialData.name) {
+              }
+              if (!this.sessionStore[sessionId].credentialData.name) {
                 this.sessionStore[sessionId].credentialData.name =
                   credentialStep;
 
                 // Step: Ask to confirm credential selection
                 response = `CON Would you like to proceed with credential selection?\n1. Yes\n2. No`;
-              } else if (!credentialConfirmed) {
+              }
+              if (!credentialConfirmed) {
                 response = `CON Please confirm credential selection:\n1. Yes\n2. No`;
               }
               if (credentialConfirmed === '1') {
@@ -218,7 +221,8 @@ export class UssdService {
                   response =
                     'END Error selecting credentials. Please try again later.';
                 }
-              } else if (rfqConfirmation === '1') {
+              }
+              if (rfqConfirmation === '1') {
                 // Proceed with RFQ creation
                 const verification = this.sessionStore[sessionId].verification;
                 const pfiDID =
@@ -241,13 +245,13 @@ export class UssdService {
 
                   // Transition to quote confirmation
                   response = `CON Your Tx for ${amount} units - Created Successfully. \nWould you like to proceed with the quote?\n1. Proceed\n2. Cancel`;
-                  return response;
                 } catch (error) {
                   this.logger.error('Error creating RFQ: ', error);
                   response = 'END Error creating RFQ. Please try again later.';
                   return response;
                 }
-              } else if (quoteConfirmation === '1') {
+              }
+              if (quoteConfirmation === '1') {
                 // Proceed with quote processing
                 const pfiDID =
                   this.sessionStore[sessionId].storedOfferings[
