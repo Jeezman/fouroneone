@@ -178,7 +178,8 @@ export class UssdService {
                 response = `CON Would you like to proceed with credential selection?\n1. Yes\n2. No`;
               } else if (!credentialConfirmed) {
                 response = `CON Please confirm credential selection:\n1. Yes\n2. No`;
-              } else if (credentialConfirmed === '1') {
+              }
+              if (credentialConfirmed === '1') {
                 // Proceed with credential selection
                 const customerName = `${this.sessionStore[sessionId].credentialData.firstName} ${this.sessionStore[sessionId].credentialData.lastName}`;
                 const customerDID = user.did;
@@ -214,8 +215,7 @@ export class UssdService {
                   response =
                     'END Error selecting credentials. Please try again later.';
                 }
-              }
-              if (rfqConfirmation === '1') {
+              } else if (rfqConfirmation === '1') {
                 // Proceed with RFQ creation
                 const verification = this.sessionStore[sessionId].verification;
                 const pfiDID =
@@ -238,14 +238,12 @@ export class UssdService {
 
                   // Transition to quote confirmation
                   response = `CON Your Tx for ${amount} units - Created Successfully. \nWould you like to proceed with the quote?\n1. Proceed\n2. Cancel`;
-                  return response; // Ensure the response is returned to the user
+                  return response;
                 } catch (error) {
                   this.logger.error('Error creating RFQ: ', error);
                   response = 'END Error creating RFQ. Please try again later.';
-                  return response; // Ensure error response is returned
+                  return response;
                 }
-              } else if (rfqConfirmation === '2') {
-                response = `END RFQ creation has been cancelled. Thank you for using our service.`;
               } else if (quoteConfirmation === '1') {
                 // Proceed with quote processing
                 const pfiDID =
