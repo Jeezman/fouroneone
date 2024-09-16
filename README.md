@@ -228,7 +228,10 @@ The application will primarily target the web platform, with USSD, SMS, and IVR 
     }
     ```
 
-## Project Submission
+## Todo
 
-- **GitHub Repository:** Host the project, including frontend, backend, and documentation.
-- **README.md:** Overview, setup instructions, usage, and project details.
+- **Save Orders and Transactions in DB**.
+- **Support More PFIs**.
+- **Track User's Balance**.
+- **SMS and IVR Integration**.
+- **Customer and Admin Dashboard**.
