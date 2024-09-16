@@ -27,7 +27,6 @@ The application will primarily target the web platform, with USSD, SMS, and IVR 
 
 ### Frontend
 
-- **Web:** Built with [Next.js](https://nextjs.org/) for the user interface.
 - **USSD, SMS, IVR:** Integrated via [Africastalking API](https://africastalking.com/).
 
 ### Backend
@@ -68,7 +67,6 @@ The application will primarily target the web platform, with USSD, SMS, and IVR 
 ## Implementation Plan
 
 1. **Project Setup**
-   - Initialize Next.js for the web interface.
    - Set up NestJS with PostgreSQL for the backend.
    - Integrate tbDEX SDK.
 
@@ -94,7 +92,7 @@ The application will primarily target the web platform, with USSD, SMS, and IVR 
 
 7. **Testing and Deployment**
    - Conduct thorough testing.
-   - Deploy on a cloud platform (e.g., Vercel or Heroku).
+   - Deploy on a cloud platform (Digital Ocean).
    - Set up GitHub repository with documentation.
 
 ## Setting Up the NestJS Application
@@ -104,20 +102,19 @@ The application will primarily target the web platform, with USSD, SMS, and IVR 
 1. **Create a new NestJS project:**
 
     ```bash
-    npx @nestjs/cli new wallet-app
+    git clone https://github.com/Jeezman/fouroneone
     ```
 
 2. **Navigate into the project directory:**
 
     ```bash
-    cd wallet-app
+    cd fouroneone
     ```
 
 3. **Install required dependencies:**
 
     ```bash
-    npm install @nestjs/typeorm typeorm pg
-    npm install @nestjs/config
+    npm install install
     ```
 
 4. **Set up the database configuration:**
