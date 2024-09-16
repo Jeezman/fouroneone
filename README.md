@@ -99,7 +99,7 @@ The application will primarily target the web platform, with USSD, SMS, and IVR 
 
 ### 1. Initialize the NestJS Project
 
-1. **Create a new NestJS project:**
+1. **Clone the Repo:**
 
     ```bash
     git clone https://github.com/Jeezman/fouroneone
