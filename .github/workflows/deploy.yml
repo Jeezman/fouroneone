@@ -1,8 +1,8 @@
 name: CI/CD Pipeline
 
-on: 
+on:
   push:
-    branches: [ "master", "new-flow" ]
+    branches: ['master', 'new-flow']
   workflow_dispatch:
 
 jobs:
@@ -17,13 +17,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-  
+
       - name: Install Node Modules 🔧
         run: |
           npm install
           npm run build --if-present
         working-directory: ./ussd
-  
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
@@ -31,7 +31,7 @@ jobs:
     steps:
       # - name: Install doctl
       #   uses: digitalocean/action-doctl@v2
-      #   with: 
+      #   with:
       #     token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
       - name: 'SSH and Deploy'
         uses: appleboy/ssh-action@master
