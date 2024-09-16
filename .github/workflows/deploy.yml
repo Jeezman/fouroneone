@@ -1,8 +1,8 @@
 name: CI/CD Pipeline
 
-on: 
+on:
   push:
-    branches: [ "master", "new-flow" ]
+    branches: ['master', 'new-flow']
   workflow_dispatch:
 
 jobs:
@@ -17,37 +17,62 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-  
+
       - name: Install Node Modules 🔧
         run: |
           npm install
           npm run build --if-present
         working-directory: ./ussd
-  
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
 
     steps:
-      - name: Install doctl
-        uses: digitalocean/action-doctl@v2
-        with: 
-          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-  
+      # - name: Install doctl
+      #   uses: digitalocean/action-doctl@v2
+      #   with:
+      #     token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
       - name: 'SSH and Deploy'
         uses: appleboy/ssh-action@master
         with:
-            host: ${{ secrets.DROPLET_IP }}
-            username: ${{ secrets.DROPLET_USER }}
-            key: ${{ secrets.SSH_PRIVATE_KEY }}
-            passphrase: ${{ secrets.SSH_PASSPHRASE }}
-            script: |
-              pwd
-              echo $HOME
-              cd /home/${{ secrets.DROPLET_USER }}/dev/fouroneone
-              pwd
-              # git pull
-              git checkout new-flow
-              cd /home/${{ secrets.DROPLET_USER }}/dev/fouroneone/ussd
-              # npm run build
-              # pm2 restart ussd
+          host: ${{ secrets.DROPLET_IP }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          script: |
+            source ~/.bashrc
+            echo ${{ secrets.LAST_PASS }} | sudo -S apt install -y nodejs
+            echo ${{ secrets.LAST_PASS }} | sudo -S apt install -y npm
+            node -v
+            echo ${{ secrets.LAST_PASS }} | sudo -S npm install -g pm2
+            pwd
+            cd /home/${{ secrets.DROPLET_USER }}/dev/fouroneone
+            git pull
+            cd /home/${{ secrets.DROPLET_USER }}/dev/fouroneone/ussd
+            npm run build
+            cd ..
+            cat > config.json << EOL
+            {
+                "apps": [
+                    {
+                        "name": "ussd",
+                        "script": "ussd/dist/main.js",
+                        "env_production": {
+                          "NODE_ENV": "production",
+                          "DATABASE_HOST": "${{ secrets.DROPLET_USER }}",
+                          "DATABASE_PORT": "${{ secrets.DATABASE_PORT }}",
+                          "DATABASE_USER": "${{ secrets.DATABASE_USER }}",
+                          "DATABASE_PASSWORD": "${{ secrets.DATABASE_PASSWORD }}",
+                          "DATABASE_NAME": "postgres",
+                          "PORT": "${{ secrets.DATABASE_PORT }}",
+                          "AFRICASTALKING_API_KEY": "${{ secrets.AFRICASTALKING_API_KEY }}",
+                          "AFRICASTALKING_USERNAME": "${{ secrets.AFRICASTALKING_USERNAME }}"
+                         },
+                        "watch": true
+                    },
+                ]
+            }
+            EOL
+            # pm2 start config.json --env production
+            # pm2 kill
